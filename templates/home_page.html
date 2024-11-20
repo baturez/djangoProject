@@ -1,0 +1,196 @@
+{% extends 'base.html' %}
+{% load static %}
+{% load custom_filters %}
+
+{% block title %}Bartini - Giriş{% endblock %}
+
+{% block content %}
+     <link rel="stylesheet" href="{% static 'home.css' %}">
+    <script src="{% static 'homejs.js' %}"></script>
+<!-- Orta kısımda hikayeler ve post paylaşımı alanı -->
+<div class="story-container">
+    <div class="story" onclick="showLargeStory(0)">
+        <img class="story-img" src="https://picsum.photos/200/300" alt="">
+    </div>
+    <div class="story" onclick="showLargeStory(1)">
+        <img class="story-img" src="https://picsum.photos/200/300?1" alt="">
+    </div>
+    <div class="story" onclick="showLargeStory(2)">
+        <img class="story-img" src="https://picsum.photos/200/300?2" alt="">
+    </div>
+</div>
+
+
+<div class="large-story-container" id="largeStoryContainer" style="display: none;" onclick="closeLargeStory()">
+    <span class="close-btn">&times;</span>
+    <img id="largeStoryImage" src="" alt="Büyütülmüş Hikaye" onclick="nextStory(event)">
+</div>
+
+   <div class="create-post">
+    <form id="postForm" method="POST" action="{% url 'add_post' %}" enctype="multipart/form-data">
+        {% csrf_token %}
+        <textarea name="post_content" placeholder="Neler Düşünüyorsunuz?" required></textarea>
+
+        <!-- Hidden inputs for image and video uploads -->
+        <input type="file" id="photoInput" name="post_files" accept="image/*" style="display: none;">
+        <input type="file" id="videoInput" name="post_files" accept="video/*" style="display: none;">
+
+        <button type="submit" class="send-btn">Gönder</button>
+
+        <!-- Icons to toggle photo or video input -->
+        <a href="#" onclick="showInput('photo')">
+            <img style="width: 25px" src="{% static 'images/camera.png' %}">
+        </a>
+        <a href="#" onclick="showInput('video')" style="margin-left: 5px;">
+            <img style="width: 25px" src="{% static 'images/video.png' %}">
+        </a>
+    </form>
+</div>
+
+<!-- Postların listelenmesi -->
+
+<div class="posts-container">
+    {% if posts %}
+        {% for post in posts %}
+        <div class="post">
+            <div class="post-header">
+                <img src="https://picsum.photos/200" class="pp-img">
+                <h4>{{ post.username }}</h4>
+            </div>
+            <p>{{ post.content }}</p>
+
+            <!-- Display media if available -->
+            {% if post.file_urls %}
+                <div class="post-media">
+                    {% for url in post.file_urls %}
+                        {% if url|regex_search:"\.(jpg|jpeg|png|gif)$" %}
+                            <img src="{{ url }}" alt="Image" style="max-width: 100%; width: 450px; height: 250px">
+                        {% elif url|regex_search:"\.(mp4|webm|ogg)$" %}
+                            <video controls style="max-width: 100%;">
+                                <source src="{{ url }}" type="video/mp4">
+                                Your browser does not support the video tag.
+                            </video>
+                        {% endif %}
+
+                    {% endfor %}
+                </div>
+
+            {% endif %}
+<div class="post-footer">
+    <button style="background-color: white; border:white " class="like-btn" data-post-id="{{ post|get_post_id }}"><img style="width: 20px" src="{% static 'images/like.png' %}"> {{ post.likes }}</button>
+    <button style="background-color: white; border:white " class="comment-btn" onclick="toggleComments('{{ post|get_post_id }}')"><img style="width: 20px" src="{% static 'images/comment.png' %}"> {{ post.comment_count }}</button>
+
+</div>
+        <div class="comments-section" id="comments-{{ post|get_post_id }}" style="display: none;">
+        <h5>Comments</h5>
+        {% if post.comments %}
+            {% for comment in post.comments %}
+                <div class="comment">
+                    <strong>{{ comment.commenter }}</strong>: {{ comment.content }}
+                    <small>{{ comment.created_at }}</small>
+                
+                </div>
+            {% endfor %}
+        {% else %}
+            <p>No comments yet.</p>
+        {% endif %}
+
+        <!-- Add Comment Form -->
+        <form method="post" action="{% url 'add_comment' %}" class="add-comment-form" onsubmit="return submitComment(event, '{{ post|get_post_id }}')">
+            {% csrf_token %}
+            <input type="hidden" name="post_id" value="{{ post|get_post_id }}">
+            <input type="text" name="comment_content" placeholder="Add a comment..." required>
+            <button type="submit">Post Comment</button>
+        </form>
+    </div>
+            <small>{{ post.created_at }}</small>
+        </div>
+        {% endfor %}
+    {% else %}
+        <p>Henüz paylaşım yapılmadı.</p>
+    {% endif %}
+</div>
+
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+<script>
+   $(document).ready(function(){
+    $('#postForm').submit(function(event){
+        event.preventDefault(); 
+
+        var formData = new FormData(this); 
+
+        $.ajax({
+            type: 'POST',
+            url: "{% url 'add_post' %}",
+            data: formData,
+            processData: false, 
+            contentType: false, 
+            success: function(response) {
+    if (response.success) {
+        const newPost = `
+            <div class="post">
+                <div class="post-header">
+                    <img src="https://picsum.photos/200" class="pp-img">
+                    <h4>${response.username}</h4>
+                </div>
+                <p>${response.post_content}</p>
+                ${response.file_urls.map(url => `
+                    <div class="post-media">
+                        ${url.match(/\.(jpg|jpeg|png|gif)$/) ?
+                            `<img src="${url}" alt="Image" style="max-width: 100%;">` :
+                            `<video controls style="max-width: 100%;">
+                                <source src="${url}" type="video/mp4">
+                                Your browser does not support the video tag.
+                            </video>`
+                        }
+                    </div>
+                `).join('')}
+                <small>Şimdi</small>
+            </div>
+        `;
+        $('.posts-container').prepend(newPost);
+        $('textarea[name="post_content"]').val('');
+        $('#photoInput').val('');
+        $('#videoInput').val('');
+    } else {
+        alert(response.error_message);
+    }
+}
+        });
+    });
+});
+
+
+      function showInput(type) {
+        document.getElementById('photoInput').style.display = 'none';
+        document.getElementById('videoInput').style.display = 'none';
+
+        if (type === 'photo') {
+            document.getElementById('photoInput').style.display = 'block';
+        } else if (type === 'video') {
+            document.getElementById('videoInput').style.display = 'block';
+        }
+    }
+    $(document).on('click', '.like-btn', function() {
+    const postId = $(this).data('post-id');   
+    const button = $(this); 
+
+    $.ajax({
+        type: 'POST',
+        url: '{% url "like_post" %}', 
+        data: {
+            post_id: postId,
+            csrfmiddlewaretoken: '{{ csrf_token }}' 
+        },
+        success: function(response) {
+            if (response.success) {
+                button.html(` <img style="width: 20px" src="{% static 'images/like.png' %}">${response.likes}`);  
+            } else {
+                alert(response.error_message);
+            }
+        }
+    });
+});
+</script>
+
+{% endblock %}

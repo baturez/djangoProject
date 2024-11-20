@@ -1,0 +1,87 @@
+{% extends 'base.html' %}
+{% load static %}
+{% load custom_filters %}
+
+{% block title %}Profilim{% endblock %}
+
+
+{% block content %}
+      <link rel="stylesheet" href="{% static 'profile.css' %}">
+
+    <div id="login-container">
+        <div class="profile-img">   <img src="{{ user.profile_picture }}" alt="Profil Resmi" style="max-width: 100px;"></div>
+        <h1>{{ username }}</h1>
+        <div class="description">
+            <h1 style="font-size: 15px">E-Posta: {{ email }}</h1>
+        </div>
+        <button onclick="window.location.href='/home'">Ana Sayfa</button>
+    <form id="profilePictureForm" enctype="multipart/form-data" method="POST" action="{% url 'upload_profile_picture' %}">
+    {% csrf_token %}
+    <input type="file" name="profile_picture" accept="image/*" required>
+    <button type="submit">Profil Fotoğrafı Yükle</button>
+</form>
+    </div>
+
+    <!-- Arkadaşlık İstekleri Bölümü -->
+   <div id="friend-requests-container">
+    <h2>Arkadaşlık İsteklerim</h2>
+<ul>
+    {% for request in requests %}
+        <li>
+            {{ request.from_user }}
+            <a href="{% url 'accept_friend_request' request|get_object_id %}">Kabul Et</a>
+            <a href="{% url 'reject_friend_request' request|get_object_id %}">Reddet</a>
+        </li>
+    {% empty %}
+        <li>Henüz arkadaşlık isteğiniz yok.</li>
+    {% endfor %}
+</ul>
+
+</div>
+
+    <!-- Arkadaşlar Bölümü -->
+<div id="friends-container">
+    <h2>Arkadaşlarım</h2>
+    <ul>
+        {% for friend in friends %}
+            <li>{{ friend.username }}</li>  <!-- Use the appropriate attribute -->
+        {% empty %}
+            <li>Henüz arkadaşınız yok.</li>
+        {% endfor %}
+    </ul>
+</div>
+
+    <!-- Arkadaş Arama Bölümü -->
+<div id="friend-search-container">
+    <h2>Arkadaş Ara</h2>
+    <form action="{% url 'search_friends' %}" method="post">
+        {% csrf_token %}
+        <input type="text" name="search_query" placeholder="Kullanıcı adıyla ara" required>
+        <button type="submit">Ara</button>
+    </form>
+    {% if search_results %}
+    <h3>Arama Sonuçları:</h3>
+    <ul>
+        {% for user in search_results %}
+            <li>
+                {{ user.username }}
+                <form action="{% url 'send_friend_request' user.username %}" method="post" style="display:inline;">
+                    {% csrf_token %}
+                    {% if user.username in friens %}
+                        <!-- Friend already exists in the friends list -->
+                        <button type="button" disabled>Arkadaşsınız</button>
+                    {% else %}
+                        <button type="submit">Arkadaşlık İsteği Gönder</button>
+                    {% endif %}
+                </form>
+            </li>
+        {% endfor %}
+    </ul>
+{% elif search_query %}
+    <p>Arama Sonuçları Bulunamadı.</p>
+
+        <p>Arama sonuçları bulunamadı.</p>
+    {% endif %}
+</div>
+
+{% endblock %}

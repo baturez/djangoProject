@@ -1,0 +1,106 @@
+{% load static %}
+
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}Bartini{% endblock %}</title>
+    <link rel="stylesheet" href="{% static 'home.css' %}">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-QWTKZyjpPEjISv5WaRU9OFeRpok6YctnYmDr5pNlyT2bRjXh0JMhjY6hW+ALEwIH" crossorigin="anonymous">
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js" integrity="sha384-YvpcrYf0tY3lHB60NNkmXc5s9fDVZLESaAA55NDzOxhy9GkcIdslK1eN7N6jIeHz" crossorigin="anonymous"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <script src="{% static 'homejs.js' %}"></script>
+    {% block extra_css %}{% endblock %}
+</head>
+<body>
+<div class="container-fluid">
+    <div class="row">
+        <!-- Left Section -->
+        <div class="col-12 col-md-3 menu">
+
+            <div class="navbar-brand">
+                <a href="/home">
+                    <img style="height: 100px;" src="{% static 'images/logo.png' %}" alt="Logo">
+                </a>
+            </div>
+            <nav>
+                <button type="button" onclick="window.location.href='{% url 'logout' %}';" class="button-33">Log Out</button>
+                <button type="button" style="margin-right: 125px;" onclick="window.location.href='{% url 'profile' %}';" class="button-33">
+                    <div class="profile-container">
+                        <div class="profile-text">Profilim</div>
+                        <div class="profile-img"></div>
+                    </div>
+                </button>
+            </nav>
+            <div class="menu-item">
+                <button type="button" onclick="window.location.href='/home';" class="btn btn-secondary">Ana Sayfa</button>
+            </div>
+            <div class="menu-item"><button type="button" class="btn btn-secondary">Grup Odaları</button></div>
+            <div class="menu-item"><button type="button" class="btn btn-secondary">Gündem Konular</button></div>
+            <div class="menu-item"><button type="button" class="btn btn-secondary">Ayarlar</button></div>
+        </div>
+
+        <!-- Middle Section - Content Area -->
+        <div class="col-12 col-md-6 content">
+            {% block content %}
+            {% endblock %}
+        </div>
+
+        <!-- Right Section -->
+        <div class="col-12 col-md-3 sidebar">
+            {% block sidebar %}
+                <button class="button-33" role="button" onclick="window.location.href='{% url 'add_group' %}';">Gruplar</button>
+                <ul style="padding-top: 15px; list-style-type: none; padding-left: 15px;">
+                    {% if groups %}
+                        {% for group in groups %}
+                            <li><button class="button-60" role="button">{{ group.name }}</button></li>
+                        {% endfor %}
+                    {% else %}
+                        <li><p>Henüz grup eklenmedi.</p></li>
+                    {% endif %}
+                </ul>
+                <button class="button-33" role="button">Gündem Konular</button>
+                <ul style="padding-top: 15px; list-style-type: none; padding-left: 15px;">
+                    <li><button class="button-60" role="button">Konu x</button></li>
+                    <li><button class="button-60" role="button">Konu y</button></li>
+                    <li><button class="button-60" role="button">Konu z</button></li>
+                </ul>
+            {% endblock %}
+
+           <!-- Chat Bar -->
+<button class="btn btn-info" onclick="toggleChat()">Sohbeti Aç/Kapat</button>
+<div class="chat-bar" id="chat-bar"  style="display: none;"> 
+    <button class="chat-header" onclick="toggleChat()" style="width: 100%">Sohbet</button>
+    <div class="friends-list" id="friends-list">
+        <h2>Arkadaşlar</h2>
+        <ul id="friend-list">
+            {% for friend in friends %}
+                <li onclick="selectFriend('{{ friend.username }}')">{{ friend.username }}</li>
+            {% empty %}
+                <li>Henüz arkadaş yok.</li>
+            {% endfor %}
+        </ul>
+    </div>
+    <div id="chat-section" style="display: none;">
+        <div id="selected-friend-name" style="font-weight: bold; margin-bottom: 10px;"></div>
+        <div class="chat-messages" id="chat-messages"></div>
+        <div class="chat-input">
+            <input type="text" id="message-input" class="form-control" placeholder="Mesajınızı yazın..." onkeypress="if(event.key === 'Enter') sendMessage();" />
+            <button class="btn btn-primary mt-2" onclick="sendMessage()">Gönder</button>
+        </div>
+    </div>
+</div>
+        </div>
+    </div>
+</div>
+
+{% block extra_js %}
+<script>
+    document.getElementById('chat-bar').style.display = 'none'; 
+    
+</script>
+{% endblock %}
+
+</body>
+</html>

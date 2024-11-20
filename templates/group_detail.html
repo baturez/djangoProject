@@ -1,0 +1,165 @@
+{% load static %}
+
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="csrf-token" content="{{ csrf_token }}">
+
+    <title>Grup Ekle</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-QWTKZyjpPEjISv5WaRU9OFeRpok6YctnYmDr5pNlyT2bRjXh0JMhjY6hW+ALEwIH" crossorigin="anonymous">
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js" integrity="sha384-YvpcrYf0tY3lHB60NNkmXc5s9fDVZLESaAA55NDzOxhy9GkcIdslK1eN7N6jIeHz" crossorigin="anonymous"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <link rel="stylesheet" href="{% static 'group.css' %}">
+    <script src="{% static 'group.js' %}"></script>
+</head>
+<body>
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-3 menu"> <!-- Sol Kısım -->
+            <logo>
+                <div class="navbar-brand">
+                    <a href="/home">
+                        <img style="height: 100px;" src="{% static 'images/logo.png' %}" alt="Bootstrap">
+                    </a>
+                </div>
+            </logo>
+            <nav>
+                <button type="button" onclick="window.location.href='{% url 'logout' %}';" class="button-33">Log Out</button>
+                <button type="button" style="margin-right: 125px;" onclick="window.location.href='{% url 'profile' %}';" class="button-33">
+                    <div class="profile-container">
+                        <div class="profile-text">Profilim</div>
+                        <div class="profile-img"></div>
+                    </div>
+                </button>
+            </nav>
+            <div class="menu-item"> <button type="button" onclick="window.location.href='/home';" class="btn btn-secondary">Ana Sayfa</button></div>
+            <div class="menu-item"><button type="button" class="btn btn-secondary">Grup Odaları</button></div>
+            <div class="menu-item"><button type="button" class="btn btn-secondary">Gündem Konular</button></div>
+            <div class="menu-item"><button type="button" class="btn btn-secondary">Ayarlar</button></div>
+        </div>
+
+       <div class="col-6 content"> <!-- Orta Kısım -->
+    <h1>Grup ismi: {{ group.name }}</h1>
+    <h2>Grup Sahibi: {{ group.owner }}</h2>
+
+    {% if user_username == group.owner %}
+        <a href="#" id="manage-requests-btn">
+            <button class="button-60">İstekleri yönet</button>
+        </a>
+
+        <div id="membership-requests-container" style="margin-top: 20px;"></div>
+
+        <p>Üyeler:</p>
+        <ul>
+            {% for member in group.members %}
+                <li>{{ member }}</li>
+            {% endfor %}
+        </ul>
+    {% else %}
+        <form method="POST" action="{% url 'request_membership' group_id_str %}">
+            {% csrf_token %}
+            <button type="submit" class="button-60">Katılma isteği gönder</button>
+        </form>
+
+        <p>Üyeler:</p>
+        <ul>
+            {% for member in group.members %}
+                <li>{{ member }}</li>
+            {% endfor %}
+        </ul>
+    {% endif %}
+               <!-- Chat Bar -->
+<button onclick="toggleGroupChat('actual_group_id')">Open Group Chat</button>
+<div class="chat-bar" id="group-chat-bar" style="display: none;"> <!-- Initially hidden -->
+    <button class="chat-header" onclick="toggleGroupChat('YOUR_GROUP_ID_HERE')" style="width: 100%">Grup Sohbeti</button>
+    
+    <div id="chat-section">
+        <div id="selected-group-name" style="font-weight: bold; margin-bottom: 10px;">Grup Adı: {{ group.name }}</div>
+        <div class="chat-messages" id="group-chat-messages"></div>
+        <div class="chat-input">
+            <input type="text" id="group-message-input" class="form-control" placeholder="Mesajınızı yazın..." onkeypress="if(event.key === 'Enter') sendGroupMessage();" />
+            <button class="btn btn-primary mt-2" onclick="sendGroupMessage()">Gönder</button>
+        </div>
+    </div>
+
+</div>
+</div>
+
+        <div class="col-3 sidebar"> <!-- Sağ Kısım -->
+            <button class="button-33" role="button">Gündem Konular</button>
+            <ul style="padding-top: 15px; list-style-type: none; padding-left: 15px;">
+                <li><button class="button-60" role="button">Konu x</button></li>
+                <li><button class="button-60" role="button">Konu x</button></li>
+                <li><button class="button-60" role="button">Konu x</button></li>
+            </ul>
+        </div>
+    </div>
+</div>
+
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+
+<script type="text/javascript">
+    $(document).ready(function() {
+        $('#manage-requests-btn').on('click', function(e) {
+            e.preventDefault(); 
+
+            $.ajax({
+                url: "{% url 'get_membership_requests' group_id_str %}", 
+                method: 'GET',
+              success: function(response) {
+    $('#membership-requests-container').empty();
+
+    if (response.pending_requests.length > 0) {
+        var requestList = $('<ul></ul>');
+        response.pending_requests.forEach(function(req) {
+            var listItem = $('<li></li>').text(req.username);
+
+            var approveButton = $('<button class="btn btn-success">Kabul Et</button>').on('click', function(e) {
+                e.preventDefault(); 
+                handleMembershipRequest(req.id, 'approve');
+            });
+
+            var rejectButton = $('<button class="btn btn-danger">Reddet</button>').on('click', function(e) {
+                e.preventDefault(); 
+                handleMembershipRequest(req.id, 'reject');
+            });
+
+            listItem.append(approveButton, rejectButton);
+            requestList.append(listItem);
+        });
+
+        $('#membership-requests-container').append(requestList);
+    } else {
+        $('#membership-requests-container').append('<p>Bekleyen istek yok.</p>');
+    }
+},
+                error: function() {
+                    alert('İstekleri alırken bir hata oluştu.');
+                }
+            });
+        });
+    });
+    function handleMembershipRequest(requestId, action) {
+    $.ajax({
+        url: action === 'approve' ? "{% url 'approve_request' 'dummy_id' %}".replace('dummy_id', requestId) : "{% url 'reject_request' 'dummy_id' %}".replace('dummy_id', requestId),
+        method: 'POST',
+        data: {
+            'csrfmiddlewaretoken': '{{ csrf_token }}', 
+        },
+        success: function() {
+          
+            $('#manage-requests-btn').trigger('click');
+        },
+        error: function() {
+            alert('İşlem sırasında bir hata oluştu.');
+        }
+    });
+}
+
+</script>
+
+</body>
+</html>

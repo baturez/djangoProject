@@ -1,0 +1,91 @@
+.a{
+    padding-top: 5%; background-color: #F0F0F0; width: 42cm; height: 14cm;
+}
+.background-overlay {
+    background-color: #0076b6a9; /* %50 saydamlıkta siyah renk (İstediğiniz rengi kullanabilirsiniz) */
+    padding: 15%;
+    background-size: cover;
+    background-position: center;
+    height: 300px; ;  
+    position: absolute; /* Üstüne tam olarak oturması için absolute yapıyoruz */
+
+    
+}   
+.background-section {
+    background-image: url('images/login_backgound.jpg'); /* Arka plan resmi */
+    background-size: cover;
+    background-position: center;
+    clip-path: polygon(0 0, 100% 0, 70% 100%, 0 100%); /* Çapraz kırpma işlemi */
+    position: relative; /* Saydam rengi içerisine yerleştirmek için gerekli */
+    height: 300px; /* Kendi yüksekliğinize göre ayarlayın */
+}
+.login-form {
+    display: flex;
+    flex-direction: column; /* Elemanları alt alta yerleştirir */
+    align-items: center; /* Merkezde hizalamak için */
+    gap: 10px; /* Elemanlar arasında boşluk bırakır */
+}
+
+/* Input alanı ve label grubu */
+.input-group {
+    position: relative;
+    width: 100%;
+    max-width: 300px;
+    margin-bottom: 20px;
+}
+
+.input-field {
+    width: 100%;
+    padding: 10px;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    font-size: 16px;
+    outline: none;
+}
+.inputs{
+    border: 1px solid #ccc;
+    border-radius: 6px;
+    width: 8cm; 
+    font-size: 16px;
+    outline: none;
+
+}
+
+/* Label için başlangıç konumu */
+.input-label {
+    position: absolute;
+    top: 50%;
+    left: 10px;
+    transform: translateY(-50%);
+    padding: 0 5px;
+    font-size: 16px;
+    color: #aaa;
+    transition: all 0.2s ease-in-out;
+    pointer-events: none;
+}
+
+/* Input focus olduğunda veya dolu olduğunda label yukarı kayar */
+.input-field:focus + .input-label,
+.input-field:not(:placeholder-shown) + .input-label {
+    top: -10px;
+    font-size: 12px;
+    color: #00000047;
+}
+
+.login-button {
+    width: 100%;
+    max-width: 300px;
+    padding: 10px;
+    background-color: #0076b6;
+    color: white;
+    border: none;
+    border-radius: 4px;
+}
+
+.forgot-password {
+    margin-top: 10px;
+    text-align: center;
+    display: block;
+    color: #0076b6;
+    text-decoration: none;
+}

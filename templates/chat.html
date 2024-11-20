@@ -1,0 +1,55 @@
+<!-- myapp/templates/myapp/chat.html -->
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Chat</title>
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+</head>
+<body>
+    <h1>Chat Room</h1>
+    <input id="messageInput" type="text">
+    <button onclick="sendMessage()">Send</button>
+    <ul id="messages"></ul>
+
+    <script>
+        function fetchMessages() {
+            $.ajax({
+                url: '/chat/fetch_messages/',
+                method: 'GET',
+                success: function(data) {
+                    // Mesajları temizle ve yeni mesajları ekle
+                    $('#messages').empty();
+                    data.messages.forEach(message => {
+                        $('#messages').append(`<li>${message}</li>`);
+                    });
+                },
+                error: function(error) {
+                    console.error("Mesajları çekerken hata oluştu:", error);
+                }
+            });
+        }
+
+        function sendMessage() {
+            const message = $('#messageInput').val();
+            $.ajax({
+                url: '/chat/send_message/',
+                method: 'POST',
+                data: {
+                    'message': message,
+                    'csrfmiddlewaretoken': '{{ csrf_token }}'
+                },
+                success: function() {
+                    $('#messageInput').val(''); // Mesaj gönderildikten sonra input'u temizle
+                    fetchMessages(); // Yeni mesajları tekrar çek
+                },
+                error: function(error) {
+                    console.error("Mesaj gönderilirken hata oluştu:", error);
+                }
+            });
+        }
+
+        // Mesajları her 2 saniyede bir güncelle
+        setInterval(fetchMessages, 2000);
+    </script>
+</body>
+</html>
