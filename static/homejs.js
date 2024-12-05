@@ -104,83 +104,128 @@ function nextStory(event) {
 
 
 
+let chatSocket = null;
 let selectedFriend = null;
-let lastMessageTimestamp = null;
+
 function selectFriend(friendUsername) {
     selectedFriend = friendUsername;
     document.getElementById("selected-friend-name").textContent = `Sohbet - ${friendUsername}`;
     document.getElementById("chat-section").style.display = "block";
-    fetchMessages();
-}
 
-function fetchMessages() {
-    if (selectedFriend) {
-        fetch(`/fetch_messages/?friend=${selectedFriend}`)
-            .then(response => response.json())
-            .then(data => {
-                const chatMessages = document.getElementById("chat-messages");
-                chatMessages.innerHTML = '';
+    if (chatSocket) {
+        chatSocket.close();
+    }
 
-                data.messages.forEach(message => {
+    const yourUsername = document.getElementById("username").dataset.username;
+
+    // Ortak grup adı oluşturuluyor (alfabetik sıralama için Math.min ve Math.max kullanılıyor)
+    const groupName = `chat_${[yourUsername, selectedFriend].sort().join('_')}`;
+
+    // WebSocket bağlantısını kurma
+    chatSocket = new WebSocket(`ws://${window.location.host}/ws/chat/${groupName}/`);
+
+    chatSocket.onmessage = function (event) {
+        const data = JSON.parse(event.data);
+        const chatMessages = document.getElementById("chat-messages");
+
+        const messageElement = document.createElement("div");
+        messageElement.className = "message";
+        messageElement.textContent = `${data.sender}: ${data.message}`;
+        chatMessages.appendChild(messageElement);
+
+        chatMessages.scrollTop = chatMessages.scrollHeight;
+    };
+
+    chatSocket.onclose = function () {
+        console.error("WebSocket bağlantısı kapandı.");
+    };
+
+    // MongoDB'den önceki mesajları çek
+    fetch(`/fetch_messages?friend=${friendUsername}`)
+        .then(response => response.json())
+        .then(data => {
+            const chatMessages = document.getElementById("chat-messages");
+            if (data.messages) {
+                data.messages.forEach(msg => {
                     const messageElement = document.createElement("div");
                     messageElement.className = "message";
-                    messageElement.textContent = `${message.sender}: ${message.text}`;
+                    messageElement.textContent = `${msg.sender}: ${msg.text}`;
                     chatMessages.appendChild(messageElement);
                 });
                 chatMessages.scrollTop = chatMessages.scrollHeight;
+            }
+        })
+        .catch(error => console.error('Error fetching messages:', error));
+}
+// Dosya seçimi işlemi
+function handleFileSelect(event) {
+    const fileInput = event.target;
+    const file = fileInput.files[0];
 
-                setTimeout(fetchMessages, 500);
-            })
-            .catch(error => {
-                console.error("Error fetching messages:", error);
-                setTimeout(fetchMessages, 2000);
-            });
+    if (file) {
+        // Dosya adını ve boyutunu göster
+        document.getElementById("file-name").innerText = `Seçilen dosya: ${file.name} (${(file.size / 1024).toFixed(2)} KB)`;
+        document.getElementById("file-info").style.display = "block";
     }
+}
+
+// Dosya kaldırma işlemi
+function clearFile() {
+    const fileInput = document.getElementById("file-input");
+    fileInput.value = ""; // Dosya input'unu sıfırla
+    document.getElementById("file-info").style.display = "none"; // Dosya bilgisini gizle
 }
 
 function sendMessage() {
     const messageInput = document.getElementById("message-input");
     const messageContent = messageInput.value.trim();
+    const fileInput = document.getElementById("file-input");
+    const file = fileInput.files[0];
+    const yourUsername = document.getElementById("username").dataset.username;
 
-    if (messageContent && selectedFriend) {
-        fetch(`/send_message/`, {
-            method: "POST",
-            headers: {
-                "Content-Type": "application/json",
-                "X-CSRFToken": "{{ csrf_token }}"
-            },
-            body: JSON.stringify({ message: messageContent, recipient: selectedFriend })
-        })
-        .then(response => response.json())
-        .then(data => {
-            if (data.success) {
-                messageInput.value = "";
+    if ((messageContent || file) && chatSocket && selectedFriend) {
+        console.log('Sending message:', messageContent, 'to:', selectedFriend);  // Log the message and recipient
 
-                fetchMessages();
-            } else {
-                console.error("Message sending failed:", data.error);
-            }
-        })
-        .catch(error => console.error("Error sending message:", error));
+        // Eğer dosya varsa, dosya verisini base64 olarak okuyalım
+        if (file) {
+            const reader = new FileReader();
+            reader.onload = function(event) {
+                const fileData = event.target.result.split(',')[1];  // Base64 formatına dönüştür
+
+                // WebSocket mesajını gönder
+                chatSocket.send(JSON.stringify({
+                    message: messageContent,  // Mesaj metni (boşsa null olabilir)
+                    recipient: selectedFriend,
+                    sender: yourUsername,
+                    fileName: file.name,  // Dosya adı
+                    fileSize: file.size,  // Dosya boyutu
+                    fileData: fileData    // Base64 dosya verisi
+                }));
+
+                // Dosya yüklendikten sonra inputları sıfırla
+                fileInput.value = "";  // Dosya inputunu sıfırla
+            };
+            reader.readAsDataURL(file);  // Dosyayı base64 formatında oku
+        } else {
+            // Sadece mesaj gönderiliyorsa, dosya olmadan
+            chatSocket.send(JSON.stringify({
+                message: messageContent,
+                recipient: selectedFriend,
+                sender: yourUsername
+            }));
+        }
+
+        // Mesaj inputunu sıfırla
+        messageInput.value = "";
     }
 }
-let pollingInterval;
-let isChatOpen = false;
+
+
 function toggleChat() {
     const chatBar = document.getElementById('chat-bar');
     const isVisible = chatBar.style.display === 'block';
-
-    if (!isVisible) {
-        chatBar.style.display = 'block';
-        isChatOpen = true;
-        fetchMessages();
-        pollingInterval = setInterval(fetchMessages, 2000);
-    } else {
-        chatBar.style.display = 'none';
-        isChatOpen = false;
-        clearInterval(pollingInterval);
-    }
+    chatBar.style.display = isVisible ? 'none' : 'block';
 }
 
-
 document.getElementById('send-button').addEventListener('click', sendMessage);
+

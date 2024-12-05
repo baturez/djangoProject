@@ -4,6 +4,7 @@
 <html lang="tr">
 <head>
     <meta charset="UTF-8">
+    <meta name="csrf-token" content="{{ csrf_token }}">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{% block title %}Bartini{% endblock %}</title>
     <link rel="stylesheet" href="{% static 'home.css' %}">
@@ -60,7 +61,7 @@
                         <li><p>Henüz grup eklenmedi.</p></li>
                     {% endif %}
                 </ul>
-                <button class="button-33" role="button">Gündem Konular</button>
+                <button class="button-33" role="button" onclick="window.location.href='{% url 'topics' %}';">Gündem Konular</button>
                 <ul style="padding-top: 15px; list-style-type: none; padding-left: 15px;">
                     <li><button class="button-60" role="button">Konu x</button></li>
                     <li><button class="button-60" role="button">Konu y</button></li>
@@ -68,9 +69,10 @@
                 </ul>
             {% endblock %}
 
-           <!-- Chat Bar -->
+          <!-- Chat Bar -->
+<div id="username" data-username="{{ username }}" style="display: none;"></div>
 <button class="btn btn-info" onclick="toggleChat()">Sohbeti Aç/Kapat</button>
-<div class="chat-bar" id="chat-bar"  style="display: none;"> 
+<div class="chat-bar" id="chat-bar" style="display: none;">
     <button class="chat-header" onclick="toggleChat()" style="width: 100%">Sohbet</button>
     <div class="friends-list" id="friends-list">
         <h2>Arkadaşlar</h2>
@@ -89,8 +91,17 @@
             <input type="text" id="message-input" class="form-control" placeholder="Mesajınızı yazın..." onkeypress="if(event.key === 'Enter') sendMessage();" />
             <button class="btn btn-primary mt-2" onclick="sendMessage()">Gönder</button>
         </div>
+        <!-- Dosya Yükleme -->
+        <div class="file-upload mt-3">
+            <input type="file" id="file-input" class="form-control" onchange="handleFileSelect(event)" />
+            <div id="file-info" style="display: none; margin-top: 10px;">
+                <span id="file-name"></span>
+                <button class="btn btn-danger btn-sm" onclick="clearFile()">Kaldır</button>
+            </div>
+        </div>
     </div>
 </div>
+
         </div>
     </div>
 </div>

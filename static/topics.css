@@ -1,0 +1,153 @@
+/* Genel Stil */
+div {
+    font-family: Arial, sans-serif; /* Daha modern bir font seçimi */
+    color: #333; /* Metin rengi */
+}
+
+/* Başlıklar */
+h1 {
+    font-size: 28px;
+    text-align: center;
+    color: #4CAF50; /* Ana başlık rengi */
+    margin-bottom: 20px;
+}
+
+h3 {
+    font-size: 20px;
+    color: #555; /* Alt başlık rengi */
+    margin-bottom: 15px;
+    text-align: left;
+}
+
+/* Form Stilleri */
+form {
+    background-color: #f9f9f9; /* Hafif gri arka plan */
+    padding: 20px;
+    border-radius: 8px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1); /* Hafif gölge */
+    margin-bottom: 30px;
+}
+
+form label {
+    font-weight: bold;
+    display: block;
+    margin-bottom: 5px;
+}
+
+form input[type="text"],
+form textarea {
+    width: 100%; /* Tam genişlik */
+    padding: 10px;
+    margin-bottom: 15px;
+    border: 1px solid #ccc; /* İnce kenarlık */
+    border-radius: 5px;
+    font-size: 14px;
+    box-sizing: border-box;
+}
+
+form button {
+    background-color: #4CAF50; /* Yeşil buton rengi */
+    color: white;
+    padding: 10px 20px;
+    border: none;
+    border-radius: 5px;
+    font-size: 16px;
+    cursor: pointer;
+    transition: background-color 0.3s;
+}
+
+form button:hover {
+    background-color: #45a049; /* Hover durumu */
+}
+
+/* Konular Listesi */
+#topicsContainer {
+    margin-top: 30px;
+}
+
+#topicsList {
+    list-style-type: none;
+    padding: 0;
+}
+
+#topicsList li {
+    background-color: #fff;
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    padding: 15px;
+    margin-bottom: 10px;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+    overflow-wrap: break-word; /* Uzun kelimeleri kırmak için */
+    word-wrap: break-word; /* Eski tarayıcı desteği */
+    overflow: hidden; /* Taşmayı engelle */
+}
+#topicsList li h4 {
+    font-size: 18px;
+    margin-bottom: 8px;
+    color: #4CAF50; /* Başlık rengi */
+}
+
+#topicsList li p {
+    font-size: 14px;
+    margin-bottom: 10px;
+    color: #555; /* Açıklama rengi */
+}
+
+/* Beğeni ve Beğenmeme Butonları */
+#topicsList li button {
+    display: inline-block; /* Yan yana durması için */
+    margin-right: 10px;
+    background-color: #007BFF;
+    color: white;
+    padding: 8px 12px;
+    border: none;
+    border-radius: 5px;
+    font-size: 14px;
+    cursor: pointer;
+    transition: background-color 0.3s;
+}
+
+#topicsList li button:hover {
+    background-color: #0056b3;
+}
+
+/* Yorumlar */
+#topicsList li ul {
+    margin-top: 15px;
+    padding-left: 15px;
+    border-top: 1px solid #eee;
+    padding-top: 10px;
+    width: 100%; /* Genişliği düzenler */
+}
+
+#topicsList li ul li {
+    margin-bottom: 10px;
+    font-size: 14px;
+    color: #333;
+    overflow-wrap: break-word; /* Uzun yorumların taşmasını engelle */
+}
+#topicsList li textarea {
+    width: 100%; /* Yatay taşmayı engellemek için genişlik %100 */
+    padding: 10px;
+    margin-top: 10px;
+    border: 1px solid #ccc;
+    border-radius: 5px;
+    font-size: 14px;
+    box-sizing: border-box;
+}
+
+#topicsList li ul li button {
+    margin-top: 5px;
+    background-color: #f44336; /* Kırmızı buton rengi */
+    color: white;
+    padding: 5px 10px;
+    border: none;
+    border-radius: 5px;
+    font-size: 12px;
+    cursor: pointer;
+    transition: background-color 0.3s;
+}
+
+#topicsList li ul li button:hover {
+    background-color: #d32f2f; /* Hover durumu */
+}

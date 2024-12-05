@@ -32,17 +32,14 @@ SECRET_KEY = 'django-insecure--&r(^6q3q$a$=*8^9sog=!q2n8adb%8qzo1d_afr=_9u#at(ui
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = ['26.55.36.71', 'localhost', '127.0.0.1','192.168.1.6','10.87.26.55','192.168.134.101','192.168.1.106']
-CORS_ALLOWED_ORIGINS = [
-    'http://localhost:8000',
-    "http://127.0.0.1:8000",
-]
+ALLOWED_HOSTS = ['*']
+
+
 
 # Application definition
 CORS_ALLOW_ALL_ORIGINS = True
 INSTALLED_APPS = [
     'daphne',
-    'chat',
     'django.contrib.admin',
     'django.contrib.auth',
     'django.contrib.contenttypes',
@@ -58,7 +55,7 @@ CHANNEL_LAYERS = {
     'default': {
         'BACKEND': 'channels_redis.core.RedisChannelLayer',
         'CONFIG': {
-            'hosts': [('localhost', 6379)],
+            "hosts": [("127.0.0.1", 6379)],  # Redis'in çalıştığı adres ve port
         },
     },
 }

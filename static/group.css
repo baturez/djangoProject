@@ -307,3 +307,20 @@ nav a:hover {
     align-self: flex-end;
     margin-top: 5px;
 }
+
+.chat-messages {
+    height: 300px;
+    overflow-y: scroll;
+    margin-bottom: 10px;
+    border: 1px solid #ccc;
+    padding: 10px;
+    background-color: #f9f9f9;
+}
+
+.chat-message {
+    margin-bottom: 5px;
+}
+
+.chat-message strong {
+    color: #007bff;
+}

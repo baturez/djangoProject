@@ -8,19 +8,28 @@
     <script src="{% static 'group.js' %}"></script>
 <div class=""> <!-- Orta Kısım -->
             <div class="container">
-                <h2>Yeni Grup Ekle</h2>
-                <form method="POST" action="{% url 'add_group' %}">
-                    {% csrf_token %}
-                    <div class="form-group">
-                        <label for="group_name">Grup Adı:</label>
-                        <input type="text" class="form-control" id="group_name" name="group_name" required>
-                    </div>
-                    <button type="submit" class="send-btn">Grup Ekle</button>
-                </form>
-                {% if error_message %}
-                    <div class="alert alert-danger">{{ error_message }}</div>
-                {% endif %}
-            </div>
+    <h2>Yeni Grup Ekle</h2>
+    <form method="POST" action="{% url 'add_group' %}" onsubmit="disableButton(this)">
+        {% csrf_token %}
+        <div class="form-group">
+            <label for="group_name">Grup Adı:</label>
+            <input type="text" class="form-control" id="group_name" name="group_name" required>
+        </div>
+        <button type="submit" id="submit-button" class="send-btn">Grup Ekle</button>
+    </form>
+    {% if error_message %}
+        <div class="alert alert-danger">{{ error_message }}</div>
+    {% endif %}
+</div>
+
+<script>
+    function disableButton(form) {
+        const button = form.querySelector('#submit-button');
+        button.disabled = true;
+        button.textContent = 'Ekleniyor...';
+    }
+</script>
+
 
             <!-- Grup Arama -->
             <div class="container mt-3">

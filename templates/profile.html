@@ -42,14 +42,18 @@
     <!-- Arkadaşlar Bölümü -->
 <div id="friends-container">
     <h2>Arkadaşlarım</h2>
-    <ul>
+    <ul id="friends-list">
         {% for friend in friends %}
-            <li>{{ friend.username }}</li>  <!-- Use the appropriate attribute -->
+            <li id="friend-{{ friend.username }}">
+                {{ friend.username }}
+                <button class="remove-button" data-friend="{{ friend.username }}">Çıkar</button>
+            </li>
         {% empty %}
             <li>Henüz arkadaşınız yok.</li>
         {% endfor %}
     </ul>
 </div>
+
 
     <!-- Arkadaş Arama Bölümü -->
 <div id="friend-search-container">
@@ -70,6 +74,8 @@
                     {% if user.username in friens %}
                         <!-- Friend already exists in the friends list -->
                         <button type="button" disabled>Arkadaşsınız</button>
+                        {% elif reqq.status == 'pending' %}
+                        <button type="button" disabled>istek gönderildi</button>
                     {% else %}
                         <button type="submit">Arkadaşlık İsteği Gönder</button>
                     {% endif %}
@@ -83,5 +89,58 @@
         <p>Arama sonuçları bulunamadı.</p>
     {% endif %}
 </div>
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+        const buttons = document.querySelectorAll('.remove-button');
 
+        buttons.forEach(button => {
+            button.addEventListener('click', function() {
+                const friendUsername = this.getAttribute('data-friend');
+                const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]').value;
+
+                // Onay penceresi
+                if (confirm(`${friendUsername} adlı arkadaşı çıkartmak istediğinizden emin misiniz?`)) {
+                    fetch('/remove_friend/', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'X-CSRFToken': csrfToken
+                        },
+                        body: JSON.stringify({ friend_username: friendUsername })
+                    })
+                    .then(response => {
+                        if (response.ok) {
+                            // Arkadaş listesinden kaldır ve başarı bildirimi göster
+                            const friendElement = document.getElementById(`friend-${friendUsername}`);
+                            if (friendElement) {
+                                friendElement.remove();
+                            }
+                            alert(`${friendUsername} arkadaşlarınızdan başarıyla çıkarıldı.`);
+                        } else {
+                            return response.json().then(data => {
+                                console.error('Hata:', data.error);
+                                alert('Arkadaş çıkarma işlemi başarısız oldu.');
+                            });
+                        }
+                    })
+                    .catch(error => {
+                        console.error('Hata:', error);
+                        alert('Bir hata oluştu. Lütfen tekrar deneyin.');
+                    });
+                }
+            });
+        });
+    });
+
+function showNotification(message) {
+    const notification = document.getElementById('notification');
+    notification.innerText = message;
+    notification.style.display = 'block';
+
+    setTimeout(() => {
+        notification.style.display = 'none';
+    }, 3000);
+}
+
+</script>
 {% endblock %}

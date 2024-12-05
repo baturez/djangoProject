@@ -1,0 +1,198 @@
+{% extends 'base.html' %}
+{% load static %}
+{% load custom_filters %}
+
+{% block title %}Topics{% endblock %}
+
+{% block content %}
+<link rel="stylesheet" href="{% static 'topics.css' %}">
+<div>
+    <h1>Konular</h1>
+
+    <div>
+        <h3>Yeni Konu Oluştur</h3>
+        <form id="createTopicForm">
+            <div>
+                <label for="title">Konu Başlığı:</label>
+                <input type="text" id="title" name="title" required>
+            </div>
+            <div>
+                <label for="description">Açıklama:</label>
+                <textarea id="description" name="description" rows="4" required></textarea>
+            </div>
+            <button type="submit">Oluştur</button>
+        </form>
+    </div>
+
+    <div id="topicsContainer">
+        <h3>Konular</h3>
+        <ul id="topicsList"></ul>
+    </div>
+</div>
+
+<script>
+    document.getElementById('createTopicForm').addEventListener('submit', function(event) {
+        event.preventDefault();
+
+        const title = document.getElementById('title').value;
+        const description = document.getElementById('description').value;
+
+        fetch('/api/create_topic/', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': '{{ csrf_token }}'
+            },
+            body: JSON.stringify({
+                title: title,
+                description: description
+            })
+        })
+        .then(response => response.json())
+        .then(data => {
+            alert(data.message);
+            loadTopics();
+            document.getElementById('createTopicForm').reset();
+        })
+        .catch(error => console.error('Error:', error));
+    });
+
+    function loadTopics() {
+    fetch('/api/get_topics/')
+        .then(response => response.json())
+        .then(data => {
+            if (data.error) {
+                alert(data.error);
+                return;
+            }
+
+            const topicsList = document.getElementById('topicsList');
+            topicsList.innerHTML = '';
+
+            data.topics.forEach(topic => {
+                const listItem = document.createElement('li');
+                listItem.innerHTML = `
+                    <h4>${topic.title}</h4>
+                    <p>${topic.description}</p>
+                    <p>
+                        Beğeni: <span id="topic_likes_${topic._id}">${topic.likes_count}</span>
+                        Beğenmeme: <span id="topic_dislikes_${topic._id}">${topic.dislikes_count}</span>
+                    </p>
+                    <button onclick="likeTopic('${topic._id}')">Beğen</button>
+                    <button onclick="dislikeTopic('${topic._id}')">Beğenme</button>
+                    <h5>Yorumlar:</h5>
+                    <ul id="comments_${topic._id}"></ul>
+                    <form id="commentForm_${topic._id}" onsubmit="addComment(event, '${topic._id}')">
+                        <input type="text" id="comment_text_${topic._id}" placeholder="Yorum yazın...">
+                        <button type="submit">Yorum Yap</button>
+                    </form>
+                `;
+                topicsList.appendChild(listItem);
+
+                loadComments(topic._id);
+            });
+        })
+        .catch(error => console.error('Error:', error));
+}
+
+function addComment(event, topicId) {
+    event.preventDefault();
+    
+    const commentText = document.getElementById(`comment_text_${topicId}`).value;
+    
+    if (!commentText) {
+        alert('Yorum metni boş olamaz!');
+        return;
+    }
+
+    fetch('/api/add_comment_topic/', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': '{{ csrf_token }}'
+        },
+        body: JSON.stringify({
+            topic_id: topicId,
+            comment_text: commentText
+        })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            alert('Yorum başarıyla eklendi!');
+            loadComments(topicId);
+        } else {
+            alert('Yorum eklenemedi: ' + data.error);
+        }
+    })
+    .catch(error => console.error('Error:', error));
+}
+
+function likeTopic(topicId) {
+    fetch(`/api/like_topic/${topicId}/`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': '{{ csrf_token }}'
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            alert(data.message);
+        } else {
+            alert(data.error_message || "Unknown error occurred.");
+        }
+        loadTopics();
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        alert("An error occurred while liking the topic.");
+    });
+}
+
+function dislikeTopic(topicId) {
+    fetch(`/api/dislike_topic/${topicId}/`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': '{{ csrf_token }}'
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            alert(data.message);
+        } else {
+            alert(data.error_message || "Unknown error occurred.");
+        }
+        loadTopics();
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        alert("An error occurred while disliking the topic.");
+    });
+}
+
+function loadComments(topicId) {
+    fetch(`/api/get_comments_for_topic/${topicId}/`)
+        .then(response => response.json())
+        .then(data => {
+            const commentsList = document.getElementById(`comments_${topicId}`);
+            commentsList.innerHTML = '';
+
+            data.comments.forEach(comment => {
+                const commentItem = document.createElement('li');
+                commentItem.textContent = comment.comment_text;
+                commentsList.appendChild(commentItem);
+            });
+        })
+        .catch(error => console.error('Error:', error));
+}
+
+    window.onload = function() {
+        loadTopics();
+    };
+</script>
+
+{% endblock %}

@@ -59,11 +59,21 @@
             {% endfor %}
         </ul>
     {% else %}
-        <form method="POST" action="{% url 'request_membership' group_id_str %}">
-            {% csrf_token %}
-            <button type="submit" class="button-60">Katılma isteği gönder</button>
-        </form>
+        {% if user_username in group.members  %}
 
+
+            {% else %}
+
+
+        <form method="POST" action="{% url 'request_membership' group_id_str %}" onsubmit="disableButton(this)">
+    {% csrf_token %}
+            {% if req_col.status == rejected %}
+    <button type="submit" class="button-60" id="join-group-btn">Katılma isteği gönder</button>
+    {% else %}
+    <button type="button" class="button-60">İstek Gönderildi</button>
+{% endif %}
+</form>
+        {% endif %}
         <p>Üyeler:</p>
         <ul>
             {% for member in group.members %}
@@ -84,7 +94,6 @@
             <button class="btn btn-primary mt-2" onclick="sendGroupMessage()">Gönder</button>
         </div>
     </div>
-
 </div>
 </div>
 
@@ -95,6 +104,29 @@
                 <li><button class="button-60" role="button">Konu x</button></li>
                 <li><button class="button-60" role="button">Konu x</button></li>
             </ul>
+        <hr>
+             {% if user_username == group.owner %}
+                 
+    <ul>
+        {% for member in group.members %}
+            <li>
+                {{ member }}
+                {% if member != group.owner %}
+                    
+                    <button class="btn btn-warning remove-member-btn" data-username="{{ member }}">Üye Çıkar</button>
+                {% endif %}
+            </li>
+        {% endfor %}
+    </ul>
+{% elif user_username in group.members %}
+    <!-- Kullanıcı grupta bir üye ise -->
+    <button id="leave-group-btn" class="btn btn-danger mt-3">Gruptan Ayrıl</button>
+{% endif %}
+
+
+
+       
+
         </div>
     </div>
 </div>
@@ -102,64 +134,243 @@
 <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
 
 <script type="text/javascript">
+    const groupId = "{{ group_id_str }}";  // Dynamic group ID from the Django view
+    const username = "{{ user_username }}";  // User's username for WebSocket
+    // Initialize WebSocket for group chat using the group ID
+    let groupChatSocket = null;
+    // Toggle group chat visibility and connect WebSocket
+    function toggleGroupChat() {
+        const chatBar = document.getElementById('group-chat-bar');
+        const isVisible = chatBar.style.display !== 'none';
+        chatBar.style.display = isVisible ? 'none' : 'block';
+        // If the WebSocket is not already open, initialize it
+        if (!isVisible && !groupChatSocket) {
+            initGroupChatSocket(groupId);
+        }
+    }
+   function initGroupChatSocket(groupId) {
+    // Ensure you're connecting to the correct WebSocket endpoint
+    groupChatSocket = new WebSocket('ws://' + window.location.host + '/ws/group/' + groupId + '/');
+
+    groupChatSocket.onmessage = function(event) {
+        const data = JSON.parse(event.data);
+        if (data.type === 'chat_message') {
+            displayMessage(data.sender, data.message, data.timestamp);
+        }
+    };
+    groupChatSocket.onclose = function(event) {
+        console.log('Group chat WebSocket closed:', event);
+    };
+}
+    function displayMessage(sender, message, timestamp) {
+    const chatMessagesDiv = document.getElementById('group-chat-messages');
+    const messageElement = document.createElement('div');
+    messageElement.classList.add('chat-message');
+    messageElement.innerHTML = `<strong>${sender}:</strong> ${message} <span style="font-size: 0.8em;">(${timestamp})</span>`;
+    chatMessagesDiv.appendChild(messageElement);
+}
+
+    function sendGroupMessage() {
+        const messageInput = document.getElementById('group-message-input');
+        const message = messageInput.value.trim();
+
+        if (message) {
+            groupChatSocket.send(JSON.stringify({
+                'message': message,
+                'sender': username,  // The logged-in user's username
+                'timestamp': new Date().toISOString()
+            }));
+
+            messageInput.value = '';  // Clear the input field
+        }
+    }
+
+
+
+
+
+    // Katılma isteği butonunu devre dışı bırakır ve durumunu kaydeder
+    function disableButton(form) {
+        const button = form.querySelector('#join-group-btn');
+        button.disabled = true;
+        button.textContent = 'İstek gönderiliyor...';
+        localStorage.setItem('membershipRequestSent', 'true');
+    }
+
+    // Sayfa yüklendiğinde butonun durumunu kontrol eder
+   window.onload = function() {
+    const button = document.querySelector('#join-group-btn');
+    if (button) {
+        const groupId = '{{ group_id }}'; // Dinamik grup ID'sini burada al
+        const userId = '{{ user.id }}';  // Dinamik kullanıcı ID'sini burada al
+        checkRequestStatus(groupId, userId);
+    }
+};
+
+
+    // Katılma isteği durumu kontrol fonksiyonu
+function checkRequestStatus(groupId, userUsername) {
+    fetch(`/check_request_status?group_id=${groupId}&user_username=${userUsername}`)
+        .then(response => response.json())
+        .then(data => {
+            const button = document.querySelector('#join-group-btn');
+            if (button) {
+                if (data.status === 'pending') {
+                    button.disabled = true;
+                    button.textContent = 'İstek gönderildi';  // Kullanıcıya istek gönderildiği bilgisini ver
+                } else if (data.status === 'none') {
+                    button.disabled = false;
+                    button.textContent = 'Katılma isteği gönder';
+                } else {
+                    button.disabled = true;
+                    button.textContent = 'Üyelik Onaylandı';  // Eğer istek onaylanmışsa
+                }
+            }
+        })
+        .catch(error => console.error('Hata:', error));
+}
+
+    // Buton durumunu sıfırlayan fonksiyon
+    function resetButtonState() {
+        localStorage.removeItem('membershipRequestSent');
+        const button = document.querySelector('#join-group-btn');
+        if (button) {
+            button.disabled = false;
+            button.textContent = 'Katılma isteği gönder';
+        }
+    }
+
     $(document).ready(function() {
-        $('#manage-requests-btn').on('click', function(e) {
-            e.preventDefault(); 
-
-            $.ajax({
-                url: "{% url 'get_membership_requests' group_id_str %}", 
-                method: 'GET',
-              success: function(response) {
-    $('#membership-requests-container').empty();
-
-    if (response.pending_requests.length > 0) {
-        var requestList = $('<ul></ul>');
-        response.pending_requests.forEach(function(req) {
-            var listItem = $('<li></li>').text(req.username);
-
-            var approveButton = $('<button class="btn btn-success">Kabul Et</button>').on('click', function(e) {
-                e.preventDefault(); 
-                handleMembershipRequest(req.id, 'approve');
-            });
-
-            var rejectButton = $('<button class="btn btn-danger">Reddet</button>').on('click', function(e) {
-                e.preventDefault(); 
-                handleMembershipRequest(req.id, 'reject');
-            });
-
-            listItem.append(approveButton, rejectButton);
-            requestList.append(listItem);
+        // Gruptan ayrılma butonu tıklama olayı
+        $('#leave-group-btn').on('click', function() {
+            if (confirm("Bu gruptan ayrılmak istediğinize emin misiniz?")) {
+                $.ajax({
+                    url: "{% url 'leave_group' group_id_str %}",
+                    method: 'POST',
+                    data: {
+                        'csrfmiddlewaretoken': '{{ csrf_token }}'
+                    },
+                    success: function() {
+                        alert("Gruptan başarıyla ayrıldınız!");
+                        resetButtonState(); // Buton durumunu sıfırla
+                        window.location.reload();
+                    },
+                    error: function() {
+                        alert("Gruptan ayrılırken bir hata oluştu.");
+                    }
+                });
+            }
         });
 
-        $('#membership-requests-container').append(requestList);
-    } else {
-        $('#membership-requests-container').append('<p>Bekleyen istek yok.</p>');
-    }
-},
+        // Üye çıkarma butonu tıklama olayı
+        $(document).on('click', '.remove-member-btn', function() {
+            var username = $(this).data('username');
+            if (confirm(username + " adlı üyeyi gruptan çıkarmak istediğinize emin misiniz?")) {
+                $.ajax({
+                    url: "{% url 'remove_member' group_id_str %}",
+                    method: "POST",
+                    data: {
+                        'csrfmiddlewaretoken': '{{ csrf_token }}',
+                        'username': username
+                    },
+                    success: function() {
+                        alert(username + " gruptan başarıyla çıkarıldı.");
+                        resetButtonState(); // Buton durumunu sıfırla
+                        window.location.reload();
+                    },
+                    error: function() {
+                        alert("Üye çıkarılırken bir hata oluştu.");
+                    }
+                });
+            }
+        });
+
+        // İstekleri yönetme butonu tıklama olayı
+        $('#manage-requests-btn').on('click', function(e) {
+            e.preventDefault();
+            resetButtonState();
+            $.ajax({
+                url: "{% url 'get_membership_requests' group_id_str %}",
+                method: 'GET',
+                success: function(response) {
+                    $('#membership-requests-container').empty();
+                    if (response.pending_requests.length > 0) {
+                        var requestList = $('<ul></ul>');
+                        response.pending_requests.forEach(function(req) {
+                            var listItem = $('<li></li>').text(req.username);
+
+                            var approveButton = $('<button class="btn btn-success">Kabul Et</button>').on('click', function(e) {
+                                e.preventDefault();
+                                handleMembershipRequest(req.id, 'approve', req.username); // İlgili kullanıcıyı güncelle
+                            });
+
+                            var rejectButton = $('<button class="btn btn-danger">Reddet</button>').on('click', function(e) {
+                                e.preventDefault();
+                                handleMembershipRequest(req.id, 'reject', req.username); // İlgili kullanıcıyı güncelle
+                            });
+
+                            listItem.append(approveButton, rejectButton);
+                            requestList.append(listItem);
+                        });
+                        $('#membership-requests-container').append(requestList);
+                    } else {
+                        $('#membership-requests-container').append('<p>Bekleyen istek yok.</p>');
+                    }
+                },
                 error: function() {
                     alert('İstekleri alırken bir hata oluştu.');
                 }
             });
         });
     });
-    function handleMembershipRequest(requestId, action) {
-    $.ajax({
-        url: action === 'approve' ? "{% url 'approve_request' 'dummy_id' %}".replace('dummy_id', requestId) : "{% url 'reject_request' 'dummy_id' %}".replace('dummy_id', requestId),
-        method: 'POST',
-        data: {
-            'csrfmiddlewaretoken': '{{ csrf_token }}', 
-        },
-        success: function() {
-          
-            $('#manage-requests-btn').trigger('click');
-        },
-        error: function() {
-            alert('İşlem sırasında bir hata oluştu.');
-        }
-    });
-}
 
+    // İstekleri kabul etme veya reddetme işlemi
+    function handleMembershipRequest(requestId, action, username) {
+        $.ajax({
+            url: action === 'approve' ? "{% url 'approve_request' 'dummy_id' %}".replace('dummy_id', requestId) : "{% url 'reject_request' 'dummy_id' %}".replace('dummy_id', requestId),
+            method: 'POST',
+            data: {
+                'csrfmiddlewaretoken': '{{ csrf_token }}',
+            },
+            success: function() {
+                alert(action === 'approve' ? 'İstek kabul edildi!' : 'İstek reddedildi!');
+                resetButtonState(); // Yerel depolamayı sıfırla
+                // Katılan kullanıcıya da durumu güncelle
+                updateUserButtonState(username); // Katılımcı için buton durumu güncelle
+                $('#manage-requests-btn').trigger('click'); // İstek listesini yeniden yükle
+            },
+            error: function() {
+                alert('İşlem sırasında bir hata oluştu.');
+            }
+        });
+    }
+
+    // Kullanıcının buton durumunu güncelleme fonksiyonu
+    function updateUserButtonState(username) {
+        // Katılımcının ekranında buton durumunu güncelle
+        if (username === '{{ user.username }}') {
+            // Eğer bu kullanıcıysa, katılma butonunu yeniden aktif et
+            const button = document.querySelector('#join-group-btn');
+            if (button) {
+                const requestSent = localStorage.getItem('membershipRequestSent');
+                if (requestSent === 'true') {
+                    button.disabled = true;
+                    button.textContent = 'İstek gönderildi';
+                } else {
+                    button.disabled = false;
+                    button.textContent = 'Katılma isteği gönder';
+                }
+            }
+        }
+    }
 </script>
+
+
+
+
+
+
+
 
 </body>
 </html>

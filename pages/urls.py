@@ -16,9 +16,12 @@ Including another URLconf
 """
 from django.urls import path, include
 from . import views
+from . import consumers
+from djangoProject.consumers import ChatConsumer, GroupChatConsumer
 from .views import logout, group_detail, request_membership, manage_requests, approve_request, reject_request, \
     get_membership_requests, groups, send_friend_request, accept_friend_request, \
-    reject_friend_request, view_friends, search_friends, profile_view, fetch_group_messages, send_group_message
+    reject_friend_request, view_friends, search_friends, profile_view, fetch_group_messages, send_group_message, \
+    leave_group, remove_member
 from .views import add_group
 from django.conf import settings
 from django.conf.urls.static import static
@@ -31,6 +34,14 @@ urlpatterns = [
     path('signup/', views.signup, name='signup'),
     path('register/', views.register, name='register'),
     path('home/', views.home, name='home'),
+    path('topics/', views.topic , name='topics'),
+    path('api/create_topic/', views.create_topic, name='create_topic'),
+    path('api/get_topics/', views.get_topics, name='get_topics'),
+    path('api/add_comment_topic/', views.add_comment_topic, name='add_comment_topic'),
+    path('api/get_comments_for_topic/<str:topic_id>/', views.get_comments_for_topic, name='get_comments_for_topic'),
+    path('api/like_topic/<str:topic_id>/', views.like_topic, name='like_topic'),
+    path('api/dislike_topic/<str:topic_id>/', views.dislike_topic, name='dislike_topic'),
+    path('topics/', views.list_topics, name='topics'),
     path('add_post/', views.add_post, name='add_post'),
     path('logout/', logout, name='logout'),
     path('profile/', views.profile_view, name='profile'),
@@ -59,9 +70,14 @@ urlpatterns = [
     path('add_comment/', views.add_comment, name='add_comment'),
     path('fetch-group-messages/', fetch_group_messages, name='fetch_group_messages'),
     path('send-group-message/', send_group_message, name='send_group_message'),
-
+    path('leave_group/<str:group_id>/', leave_group, name='leave_group'),
+    path('remove-member/<str:group_id>/', remove_member, name='remove_member'),
+    path('remove_friend/', views.remove_friend, name='remove_friend'),
 ]
-
+websocket_urlpatterns = [
+    path('ws/chat/<str:friend_username>/', ChatConsumer.as_asgi()),
+    path('ws/group/<group_id>/', GroupChatConsumer.as_asgi()),
+]
 if settings.DEBUG:
     urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
     urlpatterns += static(settings.PPS_URL, document_root=settings.PPS_ROOT)

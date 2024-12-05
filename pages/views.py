@@ -1,12 +1,15 @@
 from datetime import datetime
+from channels.db import database_sync_to_async
 from django.http import JsonResponse, HttpResponseRedirect
 from django.conf import settings
-
+from channels.layers import get_channel_layer
+from asgiref.sync import async_to_sync
 from django.shortcuts import render, redirect
-from pymongo import MongoClient
+from pymongo import MongoClient, DESCENDING
 import bcrypt
 from django.core.files.storage import FileSystemStorage
 from .models import UserProfile
+from django.utils.decorators import method_decorator
 
 from bson import ObjectId
 from django.http import JsonResponse
@@ -30,7 +33,8 @@ from django.contrib.auth import login as auth_login
 from django.contrib.sessions.models import Session
 from django.contrib.auth import logout as auth_logout
 from django.http import JsonResponse
-from .models import ChatMessage
+from flask import Flask, request, jsonify, session
+
 from django.db.models import Q
 MONGO_URI = 'mongodb+srv://batuhanfahri06:PezQB4OKaTHSEjFm@bartini.qyrro.mongodb.net/?retryWrites=true&w=majority&appName=bartini'
 DATABASE_NAME = 'my_database'
@@ -38,12 +42,18 @@ USER_COLLECTION = 'users'
 POST_COLLECTION = 'posts'
 GROUP_COLLECTION = 'groups'
 TOPIC_COLLECTION = 'topics'
+TOPIC_COMMENT_COLLECTION = 'topic_comments'
+COMMENT_COLLECTION = 'comments'
 JOIN_REQUEST_COLLECTION = 'join_request'
 FRIEND_REQUEST_COLLECTION = 'friend_requests'
 client = MongoClient(MONGO_URI)
 db = client[DATABASE_NAME]
 messages_collection = db['messages']
 register = template.Library()
+app = Flask(__name__)
+app.secret_key = '856306'
+MEMBERSHIP_REQUEST_COLLECTION = 'membership_requests'
+
 @register.filter
 @register.filter
 def get_object_id(request):
@@ -55,7 +65,254 @@ def signup(request):
     return render(request, "sign_up.html")
 
 def home(request):
-    return render(request, "home_page.html")
+    client = MongoClient(MONGO_URI)
+    db = client[DATABASE_NAME]
+    username = request.session.get('username')
+    user_collection = db[USER_COLLECTION]
+    user = user_collection.find_one({"username": username})
+
+    current_user = user_collection.find_one({'username': username})
+    friends = get_friends(current_user) if current_user else []
+
+    post_collection = db[POST_COLLECTION]
+    posts = post_collection.find().sort("created_at", -1)
+
+    group_collection = db[GROUP_COLLECTION]
+    groups = group_collection.find()
+
+    return render(request, 'home_page.html', {
+        'posts': posts,
+        'groups': groups,
+        'username': username,
+        'current_user': current_user,
+        'friends': friends
+    })
+
+def topic(request):
+    username = request.session.get('username')
+    user_collection = db[USER_COLLECTION]
+    user = user_collection.find_one({"username": username})
+    current_user = user_collection.find_one({'username': username})
+    friends = get_friends(current_user) if current_user else []
+    group_collection = db[GROUP_COLLECTION]
+    groups = group_collection.find()
+    return render(request, "topics.html" ,{
+        'groups': groups,
+        'username': username,
+        'current_user': current_user,
+        'friends': friends
+    })
+
+
+
+
+
+def get_topics(request):
+    if request.method == 'GET':
+        try:
+            topics = list(db[TOPIC_COLLECTION].find())
+
+            if not topics:
+                return JsonResponse({'error': 'No topics found.'}, status=404)
+
+            # Konuları düzenle
+            for topic in topics:
+                topic['_id'] = str(topic['_id'])
+                topic['likes_count'] = len(topic.get('likes', []))
+                topic['dislikes_count'] = len(topic.get('dislikes', []))
+
+            return JsonResponse({'topics': topics}, safe=False)
+
+        except Exception as e:
+            return JsonResponse({'error': str(e)}, status=400)
+
+
+
+def list_topics(request):
+    topics = db[TOPIC_COLLECTION].find()
+    for topic in topics:
+        topic['_id'] = str(topic['_id'])  # JSON uyumu için ID'yi stringe çevir
+    return render(request, 'topics.html', {'topics': topics})
+
+@csrf_exempt
+def create_topic(request):
+    if request.method == 'POST':
+        try:
+            data = json.loads(request.body)
+            title = data.get('title')
+            description = data.get('description')
+            username = request.session.get('username')
+            likes = "0"
+            dislikes = "0"
+
+            new_topic = {
+                'title': title,
+                'description': description,
+                'created_at': datetime.now(),
+                'username': username,
+                'comments': [],
+                'comment_count': 0 ,
+                'like': likes,
+                'dislike': dislikes,
+            }
+
+            result = db[TOPIC_COLLECTION].insert_one(new_topic)
+            topic_id = str(result.inserted_id)
+
+            return JsonResponse({
+                'success': True,
+                'message': 'Topic created successfully!',
+                'topic_id': topic_id,
+                'likes': 0,
+                'dislikes': 0
+            }, status=201)
+
+        except Exception as e:
+            return JsonResponse({'success': False, 'error_message': str(e)}, status=400)
+
+
+@csrf_exempt
+def add_comment_topic(request):
+    if request.method == 'POST':
+        try:
+            data = json.loads(request.body)
+            topic_id = data.get('topic_id')
+            comment_text = data.get('comment_text')
+            commenter = request.session.get('username')
+
+            if not topic_id or not comment_text:
+                return JsonResponse({'error': 'Topic ID and comment text are required.'}, status=400)
+
+            # Yeni yorum oluştur
+            new_comment = {
+                'topic_id': ObjectId(topic_id),
+                'comment_text': comment_text,
+                'created_at': datetime.now(),
+                'commenter': commenter
+            }
+
+            # MongoDB'ye yeni yorumu ekle
+            db['topic_comments'].insert_one(new_comment)
+
+            # Konunun comment_count'ını artır
+            db['topics'].update_one(
+                {'_id': ObjectId(topic_id)},
+                {'$inc': {'comment_count': 1}}
+            )
+
+
+            return JsonResponse({'success': True, 'message': 'Comment added successfully!'}, status=201)
+
+        except Exception as e:
+            return JsonResponse({'error': str(e)}, status=400)
+
+
+
+@csrf_exempt
+def get_comments_for_topic(request, topic_id):
+    if request.method == 'GET':
+        try:
+            comments = db['topic_comments'].find({'topic_id': ObjectId(topic_id)})
+            comment_list = [{'comment_text': comment['comment_text'], 'created_at': comment['created_at'], 'commenter': comment['commenter']} for comment in comments]
+            return JsonResponse({'comments': comment_list}, status=200)
+
+        except Exception as e:
+            return JsonResponse({'error': str(e)}, status=400)
+
+def get_comments(request, topic_id):
+    try:
+        comments = list(db[COMMENT_COLLECTION].find({'topic_id': ObjectId(topic_id)}))
+
+        for comment in comments:
+            comment['_id'] = str(comment['_id'])
+
+        return JsonResponse({'comments': comments}, safe=False)
+    except Exception as e:
+        return JsonResponse({'error': str(e)}, status=400)
+
+@csrf_exempt
+def like_topic(request, topic_id):
+    if request.method == 'POST':
+        try:
+            username = request.session.get('username')
+            if not username:
+                return JsonResponse({'success': False, 'error_message': 'User not logged in.'}, status=403)
+
+            topic = db[TOPIC_COLLECTION].find_one({'_id': ObjectId(topic_id)})
+            if not topic:
+                return JsonResponse({'success': False, 'error_message': 'Topic not found.'}, status=404)
+
+            user_likes = topic.get('user_likes', {})
+
+            if user_likes.get(username) == 'liked':
+                return JsonResponse({'success': False, 'error_message': 'You have already liked this topic.'}, status=400)
+
+            if user_likes.get(username) == 'disliked':
+                return JsonResponse({'success': False, 'error_message': 'You have already disliked this topic. Please remove your dislike before liking.'}, status=400)
+
+            likes = topic.get('likes', '0')
+            likes_int = int(likes)
+            likes_int += 1
+
+            topic['dislikes'] = '0'
+
+            updated_likes = str(likes_int)
+
+            user_likes[username] = 'liked'
+
+            db[TOPIC_COLLECTION].update_one(
+                {'_id': ObjectId(topic_id)},
+                {'$set': {'likes': updated_likes, 'user_likes': user_likes}}
+            )
+
+            return JsonResponse({'success': True, 'message': 'Topic liked successfully!'}, status=200)
+
+        except Exception as e:
+            return JsonResponse({'success': False, 'error_message': str(e)}, status=400)
+
+
+
+@csrf_exempt
+def dislike_topic(request, topic_id):
+    if request.method == 'POST':
+        try:
+            username = request.session.get('username')
+            if not username:
+                return JsonResponse({'success': False, 'error_message': 'User not logged in.'}, status=403)
+
+            topic = db[TOPIC_COLLECTION].find_one({'_id': ObjectId(topic_id)})
+            if not topic:
+                return JsonResponse({'success': False, 'error_message': 'Topic not found.'}, status=404)
+
+            user_likes = topic.get('user_likes', {})
+
+            if user_likes.get(username) == 'disliked':
+                return JsonResponse({'success': False, 'error_message': 'You have already disliked this topic.'}, status=400)
+
+            if user_likes.get(username) == 'liked':
+                return JsonResponse({'success': False, 'error_message': 'You have already liked this topic. Please remove your like before disliking.'}, status=400)
+
+            dislikes = topic.get('dislikes', '0')
+            dislikes_int = int(dislikes)
+            dislikes_int += 1
+
+            topic['likes'] = '0'
+
+            updated_dislikes = str(dislikes_int)
+
+            user_likes[username] = 'disliked'
+
+            db[TOPIC_COLLECTION].update_one(
+                {'_id': ObjectId(topic_id)},
+                {'$set': {'dislikes': updated_dislikes, 'user_likes': user_likes}}
+            )
+
+            return JsonResponse({'success': True, 'message': 'Topic disliked successfully!'}, status=200)
+
+        except Exception as e:
+            return JsonResponse({'success': False, 'error_message': str(e)}, status=400)
+
+
 
 def register(request):
     if request.method == 'POST':
@@ -152,31 +409,7 @@ def get_friends(user):
     return list(user_collection.find({'username': {'$in': friends_usernames}}))
 
 
-def home(request):
-    client = MongoClient(MONGO_URI)
-    db = client[DATABASE_NAME]
-    username = request.session.get('username')
-    user_collection = db[USER_COLLECTION]
-    user = user_collection.find_one({"username": username})
 
-    current_user = user_collection.find_one({'username': username})
-    friends = get_friends(current_user) if current_user else []
-
-    # Postları çek
-    post_collection = db[POST_COLLECTION]
-    posts = post_collection.find().sort("created_at", -1)
-
-    # Grupları çek
-    group_collection = db[GROUP_COLLECTION]
-    groups = group_collection.find()
-
-    return render(request, 'home_page.html', {
-        'posts': posts,
-        'groups': groups,
-        'username': username,
-        'current_user': current_user,
-        'friends': friends
-    })
 
 def save_post_to_mongo(username, post_content, file_urls):
     post = {
@@ -299,7 +532,42 @@ def profile_view(request):
             return render(request, 'profile.html', {'error_message': error_message})
     else:
         return redirect('/login')
+@csrf_exempt
+def remove_friend(request):
+    if request.method == "POST":
+        try:
+            data = json.loads(request.body)
+            username = request.session.get('username')
+            friend_username = data.get('friend_username')
 
+            if username and friend_username:
+                client = MongoClient(MONGO_URI)
+                db = client[DATABASE_NAME]
+                user_collection = db[USER_COLLECTION]
+
+                # Kullanıcı ve arkadaşı bul
+                user = user_collection.find_one({"username": username})
+                friend = user_collection.find_one({"username": friend_username})
+
+                if user and friend:
+                    # Arkadaş listelerini güncelle
+                    user_collection.update_one(
+                        {"username": username},
+                        {"$pull": {"friends": friend_username}}
+                    )
+                    user_collection.update_one(
+                        {"username": friend_username},
+                        {"$pull": {"friends": username}}
+                    )
+                    return JsonResponse({"message": "Arkadaş başarıyla çıkarıldı."})
+                else:
+                    return JsonResponse({"error": "Kullanıcı bulunamadı."}, status=404)
+            else:
+                return JsonResponse({"error": "Geçersiz istek."}, status=400)
+        except json.JSONDecodeError:
+            return JsonResponse({"error": "Geçersiz JSON formatı."}, status=400)
+    else:
+        return JsonResponse({"error": "Geçersiz metod."}, status=405)
 
 def send_friend_request(request, username):
     if request.method == 'POST':
@@ -411,11 +679,11 @@ def search_friends(request):
         collection = db[USER_COLLECTION]
         user_collection = db[USER_COLLECTION]
         group_collection = db['groups']
-
+        friend_request_collection = db[FRIEND_REQUEST_COLLECTION]
         groups = list(group_collection.find())
         usernamea = request.session.get('username')
         user = user_collection.find_one({"username": usernamea})
-
+        reqqq = friend_request_collection.find_one({}, {"status":1},sort=[("_id", DESCENDING)])
         friens = [friend['username'] for friend in get_friends(user)]
         friends = get_friends(user)
         results = list(collection.find({"username": {"$regex": search_query, "$options": "i"}}))
@@ -427,7 +695,8 @@ def search_friends(request):
             'friens': friens,
             'friends': friends,
             'user': user,
-            'groups': groups
+            'groups': groups,
+            'reqq': reqqq
         })
 
     return redirect('profile')
@@ -479,29 +748,38 @@ def add_group(request):
     client = MongoClient(MONGO_URI)
     db = client[DATABASE_NAME]
     group_collection = db[GROUP_COLLECTION]
-    membership_requests_collection = db['membership_requests']
 
     if request.method == 'POST':
         group_name = request.POST.get('group_name')
         username = request.session.get('username')
         members = request.POST.getlist('members')
 
-        if group_name and username:
-            new_group = {
-                'name': group_name,
-                'owner': username,
-                'members': members
-            }
-            group_collection.insert_one(new_group)
-            return redirect('add_group')
-        else:
+        if not group_name or not username:
             return render(request, 'add_group.html', {'error_message': 'Grup adı veya kullanıcı bilgisi eksik.'})
 
-    groups = group_collection.find()
+        # Grup adı benzersizlik kontrolü
+        existing_group = group_collection.find_one({'name': group_name})
+        if existing_group:
+            groups = group_collection.find()
+            group_list = [{'id': str(group['_id']), 'name': group['name']} for group in groups]
+            return render(request,  'add_group.html',{
+                'error_message': f'"{group_name}" adında bir grup zaten var.',
+                'groups': group_list
+            })
 
+        new_group = {
+            'name': group_name,
+            'owner': username,
+            'members': members
+        }
+        group_collection.insert_one(new_group)
+        return redirect('add_group')
+
+    groups = group_collection.find()
     group_list = [{'id': str(group['_id']), 'name': group['name']} for group in groups]
 
     return render(request, 'add_group.html', {'groups': group_list})
+
 
 
 def group_detail(request, group_id):
@@ -509,18 +787,45 @@ def group_detail(request, group_id):
     db = client[DATABASE_NAME]
     group_collection = db[GROUP_COLLECTION]
     group = group_collection.find_one({'_id': ObjectId(group_id)})
+    req_col = db[MEMBERSHIP_REQUEST_COLLECTION]
+    username = request.session.get('username')
+    req= req_col.find_one({'group_id': group_id, 'status': 'pending' ,'username': username} )
 
     group_id_str = str(group['_id'])
 
-    username = request.session.get('username')
+
 
     user_username = username if username else 'Guest'
 
     return render(request, 'group_detail.html', {
-        'group': group,
+        'group': {
+            'id': group_id_str,
+            'name': group['name'],
+            'owner': group['owner'],
+            'members': group.get('members', [])
+        },
         'group_id_str': group_id_str,
+        'user_username': user_username,
+        'req_col': req
+
+    })
+@app.route('/check_request_status', methods=['GET'])
+def check_request_status():
+    group_id = request.args.get('group_id')
+    user_username = request.args.get('user_username')
+
+    # Check if a membership request exists for the given group and user
+    existing_request = JOIN_REQUEST_COLLECTION.find_one({
+        'group_id': group_id,
         'user_username': user_username
     })
+
+    if existing_request:
+        # Return the status of the existing request (e.g., 'pending', 'approved', 'rejected')
+        return jsonify({'status': existing_request['status']})
+    else:
+        # No request found, return 'none'
+        return jsonify({'status': 'none'})
 def request_membership(request, group_id):
     client = MongoClient(MONGO_URI)
     db = client[DATABASE_NAME]
@@ -603,7 +908,60 @@ def reject_request(request, request_id):
             )
 
     return redirect('manage_requests', group_id=membership_request['group_id'])
+def leave_group(request, group_id):
+    if request.method == 'POST':
+        client = MongoClient(MONGO_URI)
+        db = client[DATABASE_NAME]
+        group_collection = db[GROUP_COLLECTION]
 
+        username = request.session.get('username')
+        group = group_collection.find_one({'_id': ObjectId(group_id)})
+
+        if not group:
+            return JsonResponse({'error': 'Grup bulunamadı.'}, status=404)
+
+        if username in group['members']:
+            group_collection.update_one(
+                {'_id': ObjectId(group_id)},
+                {'$pull': {'members': username}}
+            )
+            return JsonResponse({'message': 'Gruptan başarıyla ayrıldınız.'})
+        else:
+            return JsonResponse({'error': 'Kullanıcı grupta değil.'}, status=400)
+    return JsonResponse({'error': 'Geçersiz istek.'}, status=405)
+
+def remove_member(request, group_id):
+    if request.method == "POST":
+        client = MongoClient(MONGO_URI)
+        db = client[DATABASE_NAME]
+        group_collection = db[GROUP_COLLECTION]
+
+        # Grup bilgilerini al
+        group = group_collection.find_one({'_id': ObjectId(group_id)})
+        if not group:
+            return JsonResponse({'error': 'Grup bulunamadı.'}, status=404)
+
+        username = request.POST.get('username')
+        current_user = request.session.get('username')
+
+        # Kullanıcı kontrolü
+        if group['owner'] != current_user:
+            return JsonResponse({'error': 'Yalnızca grup sahibi üye çıkarabilir.'}, status=403)
+
+        if username == group['owner']:
+            return JsonResponse({'error': 'Grup sahibi gruptan çıkarılamaz.'}, status=400)
+
+        # Üye grupta mı kontrol et
+        if username in group['members']:
+            group_collection.update_one(
+                {'_id': ObjectId(group_id)},
+                {'$pull': {'members': username}}  # Üyeyi gruptan çıkar
+            )
+            return JsonResponse({'success': True})
+        else:
+            return JsonResponse({'error': 'Bu üye grupta bulunmuyor.'}, status=404)
+
+    return JsonResponse({'error': 'Geçersiz istek.'}, status=400)
 
 def get_membership_requests(request, group_id):
     client = MongoClient(MONGO_URI)
@@ -635,6 +993,7 @@ def send_message(request):
             if not message_content or not recipient or not sender:
                 return JsonResponse({'success': False, 'error': 'Invalid input data'}, status=400)
 
+            # Mesajı MongoDB'ye kaydet
             message = {
                 'sender': sender,
                 'recipient': recipient,
@@ -642,6 +1001,19 @@ def send_message(request):
                 'timestamp': timezone.now()
             }
             messages_collection.insert_one(message)
+
+            # WebSocket üzerinden mesajı alıcıya gönder
+            channel_layer = get_channel_layer()
+            async_to_sync(channel_layer.group_send)(  # WebSocket grubuna mesaj gönder
+                f'chat_{recipient}',  # Grup ismi, burada alıcının username'i
+                {
+                    'type': 'chat_message',  # Mesaj tipi (consumer'da tanımlı)
+                    'message': message_content,  # Mesaj içeriği
+                    'sender': sender,  # Mesajın göndericisi
+                    'recipient': recipient,  # Mesajın alıcısı
+                }
+            )
+
             return JsonResponse({'success': True})
 
         except Exception as e:
@@ -650,35 +1022,77 @@ def send_message(request):
 
     return JsonResponse({'success': False}, status=400)
 
-
 @csrf_exempt
 def fetch_messages(request):
-    friend = request.GET.get('friend')
-    last_timestamp = request.GET.get('last_timestamp')
+    try:
+        # Parametreleri al
+        friend = request.GET.get('friend')
+        last_timestamp_str = request.GET.get('last_timestamp')
 
-    user = request.session.get('username')
+        if not friend:
+            return JsonResponse({'success': False, 'error': 'Friend parameter is required'}, status=400)
 
-    query = {
-        '$or': [
-            {'sender': user, 'recipient': friend},
-            {'sender': friend, 'recipient': user}
-        ]
-    }
+        user = request.session.get('username')
 
-    if last_timestamp:
-        query['timestamp'] = {'$gt': last_timestamp}
+        if not user:
+            return JsonResponse({'success': False, 'error': 'User is not authenticated'}, status=400)
 
-    while True:
-        messages = list(messages_collection.find(query).sort('timestamp', 1))
+        # last_timestamp'ı datetime formatına çevir
+        last_timestamp = None
+        if last_timestamp_str:
+            try:
+                last_timestamp = datetime.fromisoformat(last_timestamp_str)
+            except ValueError:
+                return JsonResponse({'success': False, 'error': 'Invalid timestamp format'}, status=400)
 
+        # MongoDB'den mesajları çek
+        query = {
+            '$or': [
+                {'sender': user, 'recipient': friend},
+                {'sender': friend, 'recipient': user}
+            ]
+        }
+
+        if last_timestamp:
+            query['timestamp'] = {'$gt': last_timestamp}  # Zaman damgasına göre filtrele
+
+        messages = list(messages_collection.find(query).sort('timestamp', 1))  # Mesajları zaman sırasına göre sırala
+
+        # Mesajları formatla
         if messages:
             formatted_messages = [
-                {'sender': msg['sender'], 'text': msg['text'], 'timestamp': msg['timestamp']}
+                {
+                    'sender': msg['sender'],
+                    'text': msg['text'],
+                    'timestamp': msg['timestamp'].isoformat()  # Zaman damgasını ISO formatına çevir
+                }
                 for msg in messages
             ]
             return JsonResponse({'messages': formatted_messages})
 
-        time.sleep(1)
+        return JsonResponse({'messages': []})
+
+    except Exception as e:
+        print(f"Error in fetch_messages: {e}")
+        return JsonResponse({'success': False, 'error': 'Internal server error'}, status=500)
+@database_sync_to_async
+def save_message(sender, recipient, message):
+    message_data = {
+        'sender': sender,
+        'recipient': recipient,
+        'text': message,
+        'timestamp': timezone.now()
+    }
+    messages_collection.insert_one(message_data)
+
+def save_group_message(group_id, sender, message):
+        message_data = {
+            'group_id': group_id,
+            'sender': sender,
+            'text': message,
+            'timestamp': datetime.now()
+        }
+        messages_collection.insert_one(message_data)
 @csrf_exempt
 def fetch_group_messages(request):
     group_id = request.GET.get('group_id')
@@ -690,10 +1104,10 @@ def fetch_group_messages(request):
         query['timestamp'] = {'$gt': last_timestamp}
 
     start_time = time.time()
-    timeout_duration = 10
+    timeout_duration = 10  # Timeout duration of 10 seconds
 
     while True:
-        messages = list(messages_collection.find(query).sort('timestamp', 1))
+        messages = list(messages_collection.find(query).sort('timestamp', 1))  # MongoDB query
 
         if messages:
             formatted_messages = [
@@ -703,10 +1117,11 @@ def fetch_group_messages(request):
             return JsonResponse({'messages': formatted_messages})
 
         if time.time() - start_time > timeout_duration:
-            return JsonResponse({'messages': []})
+            return JsonResponse({'messages': []})  # Return empty if no new messages within the timeout
 
         time.sleep(1)
 
+# Send group message
 @csrf_exempt
 def send_group_message(request):
     if request.method == 'POST':
@@ -716,6 +1131,7 @@ def send_group_message(request):
         user = request.session.get('username')
 
         if user:
+            # Save the message to MongoDB
             messages_collection.insert_one({
                 'group_id': group_id,
                 'sender': user,
