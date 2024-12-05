@@ -6,6 +6,8 @@
 
 {% block content %}
 <link rel="stylesheet" href="{% static 'topics.css' %}">
+    <link rel="stylesheet" href="{% static 'css/bootstrap.min.css' %}">
+    
 <div>
     <h1>Konular</h1>
 
@@ -194,5 +196,7 @@ function loadComments(topicId) {
         loadTopics();
     };
 </script>
-
+<script src="{% static 'js/jquery.min.js' %}"></script>
+    <script src="{% static 'js/popper.min.js' %}"></script>
+    <script src="{% static 'js/bootstrap.min.js' %}"></script>
 {% endblock %}

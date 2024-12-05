@@ -6,6 +6,7 @@
 
 {% block content %}
      <link rel="stylesheet" href="{% static 'home.css' %}">
+    <link rel="stylesheet" href="{% static 'css/bootstrap.min.css' %}">
     <script src="{% static 'homejs.js' %}"></script>
 <!-- Orta kısımda hikayeler ve post paylaşımı alanı -->
 <div class="story-container">
@@ -192,5 +193,7 @@
     });
 });
 </script>
-
+<script src="{% static 'js/jquery.min.js' %}"></script>
+    <script src="{% static 'js/popper.min.js' %}"></script>
+    <script src="{% static 'js/bootstrap.min.js' %}"></script>
 {% endblock %}

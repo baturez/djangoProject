@@ -7,7 +7,9 @@
 
 {% block content %}
       <link rel="stylesheet" href="{% static 'profile.css' %}">
-
+    
+    <link rel="stylesheet" href="{% static 'css/bootstrap.min.css' %}">
+    
     <div id="login-container">
         <div class="profile-img">   <img src="{{ user.profile_picture }}" alt="Profil Resmi" style="max-width: 100px;"></div>
         <h1>{{ username }}</h1>
@@ -143,4 +145,7 @@ function showNotification(message) {
 }
 
 </script>
+    <script src="{% static 'js/jquery.min.js' %}"></script>
+    <script src="{% static 'js/popper.min.js' %}"></script>
+    <script src="{% static 'js/bootstrap.min.js' %}"></script>
 {% endblock %}
