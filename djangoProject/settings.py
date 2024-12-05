@@ -53,13 +53,15 @@ INSTALLED_APPS = [
 ]
 ASGI_APPLICATION = 'djangoProject.asgi.application'
 CHANNEL_LAYERS = {
-    'default': {
-        'BACKEND': 'channels_redis.core.RedisChannelLayer',
-        'CONFIG': {
-            "hosts": [os.getenv('REDIS_URL','redis://red-ct91um68ii6s73fp9ddg:6379')],
-            "ssl": True,
-        },
-    },
+    "default": {
+    "BACKEND": "channels_redis.pubsub.RedisPubSubChannelLayer",
+    "CONFIG": {
+        "hosts":[{
+            "address": "redis://red-ct91um68ii6s73fp9ddg:6379",  # "REDIS_TLS_URL"
+            "ssl_cert_reqs": None,
+        }]
+    }
+},
 }
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
