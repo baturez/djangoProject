@@ -15,10 +15,16 @@ messages_collection = db['messages']
 group_messages_collection = db['group_messages']
 class ChatConsumer(AsyncWebsocketConsumer):
     async def connect(self):
-        self.username = self.scope['user'].username  # Kullanıcı adı
-        self.friend_username = self.scope['url_route']['kwargs']['friend_username']  # Arkadaşın kullanıcı adı
+        if not self.scope['user'].is_authenticated:
+            await self.close()  # Kimlik doğrulama yoksa bağlantıyı kapatın
+            return
+
+        self.username = self.scope['user'].username
+        self.friend_username = self.scope['url_route']['kwargs']['friend_username']
         self.room_name = f'chat_{min(self.username, self.friend_username)}_{max(self.username, self.friend_username)}'
         self.room_group_name = f'chat_{self.room_name}'
+
+        # Gruba katıl
         await self.channel_layer.group_add(
             self.room_group_name,
             self.channel_name
@@ -88,7 +94,7 @@ class ChatConsumer(AsyncWebsocketConsumer):
         )
 
     async def chat_message(self, event):
-        message = event['message']
+        message = event['messag e']
         sender = event['sender']
         recipient = event['recipient']
 
@@ -102,12 +108,11 @@ class GroupChatConsumer(AsyncWebsocketConsumer):
         self.group_name = self.scope['url_route']['kwargs']['group_id']
         self.group_channel_name = f"group_{self.group_name}"
 
-        # Join group
+        # Gruba katıl
         await self.channel_layer.group_add(
             self.group_channel_name,
             self.channel_name
         )
-
         await self.accept()
 
     async def disconnect(self, close_code):
