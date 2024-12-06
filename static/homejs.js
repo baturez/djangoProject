@@ -103,9 +103,8 @@ function nextStory(event) {
 }
 
 
-
-let chatSocket = null;
 let selectedFriend = null;
+let chatSocket = null;  // chatSocket'i global bir değişken olarak tanımlıyoruz
 
 function selectFriend(friendUsername) {
     selectedFriend = friendUsername;
@@ -113,7 +112,7 @@ function selectFriend(friendUsername) {
     document.getElementById("chat-section").style.display = "block";
 
     if (chatSocket) {
-        chatSocket.close();
+        chatSocket.close(); // Daha önce açık olan bağlantıyı kapatıyoruz
     }
 
     const yourUsername = document.getElementById("username").dataset.username;
@@ -123,16 +122,7 @@ function selectFriend(friendUsername) {
 
     // WebSocket bağlantısını kurma
     const protocol = window.location.protocol === "https:" ? "wss" : "ws";
-const chatSocket = new WebSocket(`${protocol}://${window.location.host}/ws/chat/${groupName}/`);
-
-chatSocket.onmessage = function(e) {
-    const data = JSON.parse(e.data);
-    console.log("Mesaj geldi:", data);
-};
-
-chatSocket.onclose = function(e) {
-    console.error("WebSocket kapandı:", e);
-};
+    chatSocket = new WebSocket(`${protocol}://${window.location.host}/ws/chat/${groupName}/`);
 
     chatSocket.onmessage = function (event) {
         const data = JSON.parse(event.data);
