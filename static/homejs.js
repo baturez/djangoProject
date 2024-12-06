@@ -112,8 +112,12 @@ function selectFriend(friendUsername) {
     document.getElementById("selected-friend-name").textContent = `Sohbet - ${friendUsername}`;
     document.getElementById("chat-section").style.display = "block";
 
+    // Chat geçmişini temizle
+    const chatMessages = document.getElementById("chat-messages");
+    chatMessages.innerHTML = "";  // Eski mesajları sil
+
     if (chatSocket) {
-        chatSocket.close();
+        chatSocket.close();  // Eski WebSocket bağlantısını kapat
     }
 
     const yourUsername = document.getElementById("username").dataset.username;
@@ -122,11 +126,10 @@ function selectFriend(friendUsername) {
     const groupName = `chat_${[yourUsername, selectedFriend].sort().join('_')}`;
 
     // WebSocket bağlantısını kurma
-    chatSocket = new WebSocket(`ws://${window.location.host}/ws/chat/${groupName}/`);
+    chatSocket = new WebSocket(`wss://${window.location.host}/ws/chat/${groupName}/`);
 
     chatSocket.onmessage = function (event) {
         const data = JSON.parse(event.data);
-        const chatMessages = document.getElementById("chat-messages");
 
         const messageElement = document.createElement("div");
         messageElement.className = "message";
@@ -144,7 +147,6 @@ function selectFriend(friendUsername) {
     fetch(`/fetch_messages?friend=${friendUsername}`)
         .then(response => response.json())
         .then(data => {
-            const chatMessages = document.getElementById("chat-messages");
             if (data.messages) {
                 data.messages.forEach(msg => {
                     const messageElement = document.createElement("div");
@@ -157,6 +159,7 @@ function selectFriend(friendUsername) {
         })
         .catch(error => console.error('Error fetching messages:', error));
 }
+
 // Dosya seçimi işlemi
 function handleFileSelect(event) {
     const fileInput = event.target;
