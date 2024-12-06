@@ -51,13 +51,14 @@ INSTALLED_APPS = [
     'channels',
     'corsheaders',
 ]
+
 ASGI_APPLICATION = 'djangoProject.asgi.application'
 CHANNEL_LAYERS = {
     "default": {
     "BACKEND": "channels_redis.pubsub.RedisPubSubChannelLayer",
     "CONFIG": {
         "hosts":[{
-            "address": "redis://red-ct91um68ii6s73fp9ddg:6379",  # "REDIS_TLS_URL"
+            "address": "rediss://red-ct91um68ii6s73fp9ddg:4JyDdzXWTyZkxKmhgtKAkSfTS4JRD05V@oregon-redis.render.com:6379",  # "REDIS_TLS_URL"
             "ssl_cert_reqs": None,
         }]
     }
