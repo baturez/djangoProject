@@ -221,6 +221,7 @@ function sendMessage() {
 }
 
 
+
 function toggleChat() {
     const chatBar = document.getElementById('chat-bar');
     const isVisible = chatBar.style.display === 'block';
