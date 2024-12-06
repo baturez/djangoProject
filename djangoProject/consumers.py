@@ -16,7 +16,7 @@ group_messages_collection = db['group_messages']
 class ChatConsumer(AsyncWebsocketConsumer):
     async def connect(self):
         if not self.scope['user'].is_authenticated:
-            await self.close()  # Kimlik doğrulama yoksa bağlantıyı kapatın
+            await self.close()  # If not authenticated, close the connection
             return
 
         self.username = self.scope['user'].username
@@ -24,7 +24,7 @@ class ChatConsumer(AsyncWebsocketConsumer):
         self.room_name = f'chat_{min(self.username, self.friend_username)}_{max(self.username, self.friend_username)}'
         self.room_group_name = f'chat_{self.room_name}'
 
-        # Gruba katıl
+        # Join group
         await self.channel_layer.group_add(
             self.room_group_name,
             self.channel_name
@@ -32,6 +32,7 @@ class ChatConsumer(AsyncWebsocketConsumer):
         await self.accept()
 
     async def disconnect(self, close_code):
+        # Remove from group
         await self.channel_layer.group_discard(
             self.room_group_name,
             self.channel_name
@@ -49,11 +50,11 @@ class ChatConsumer(AsyncWebsocketConsumer):
             file_size = text_data_json['fileSize']
 
             file_data_bytes = base64.b64decode(file_data)
-
             file_path = os.path.join('uploads', file_name)
             with open(file_path, 'wb') as f:
                 f.write(file_data_bytes)
 
+            # Save file metadata
             file_data_entry = {
                 'sender': sender,
                 'recipient': recipient,
@@ -61,14 +62,16 @@ class ChatConsumer(AsyncWebsocketConsumer):
                 'file_size': file_size,
                 'timestamp': timezone.now()
             }
-            messages_collection.insert_one(file_data_entry)
+            await database_sync_to_async(messages_collection.insert_one)(file_data_entry)
 
+            # Acknowledge file receipt
             await self.send(text_data=json.dumps({
                 'status': 'success',
                 'fileName': file_name,
                 'fileSize': file_size
             }))
 
+        # Handle message
         if not sender or not recipient or not message:
             await self.send(text_data=json.dumps({
                 'error': 'Eksik bilgi var.'
@@ -81,8 +84,9 @@ class ChatConsumer(AsyncWebsocketConsumer):
             'text': message,
             'timestamp': timezone.now()
         }
-        messages_collection.insert_one(message_data)
+        await database_sync_to_async(messages_collection.insert_one)(message_data)
 
+        # Broadcast message to group
         await self.channel_layer.group_send(
             self.room_group_name,
             {
@@ -94,7 +98,7 @@ class ChatConsumer(AsyncWebsocketConsumer):
         )
 
     async def chat_message(self, event):
-        message = event['messag e']
+        message = event['message']
         sender = event['sender']
         recipient = event['recipient']
 

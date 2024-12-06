@@ -119,10 +119,9 @@ function selectFriend(friendUsername) {
 
     // Ortak grup adı oluşturuluyor (alfabetik sıralama için Math.min ve Math.max kullanılıyor)
     const groupName = `chat_${[yourUsername, selectedFriend].sort().join('_')}`;
-
-    // WebSocket bağlantısını kurma
     const protocol = window.location.protocol === "https:" ? "wss" : "ws";
-    chatSocket = new WebSocket(`${protocol}://${window.location.host}/ws/chat/${groupName}/`);
+    const chatSocket = new WebSocket(`${protocol}://${window.location.host}/ws/chat/${groupName}/`);
+
 
     chatSocket.onmessage = function (event) {
         const data = JSON.parse(event.data);
