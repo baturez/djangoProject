@@ -104,7 +104,7 @@ function nextStory(event) {
 
 
 let selectedFriend = null;
-let chatSocket = null;  // chatSocket'i global bir değişken olarak tanımlıyoruz
+let chatSocket; // Declare chatSocket at the beginning of your script or higher scope
 
 function selectFriend(friendUsername) {
     selectedFriend = friendUsername;
@@ -112,34 +112,29 @@ function selectFriend(friendUsername) {
     document.getElementById("chat-section").style.display = "block";
 
     if (chatSocket) {
-        chatSocket.close(); // Daha önce açık olan bağlantıyı kapatıyoruz
+        chatSocket.close();  // Close existing socket if it is already initialized
     }
 
     const yourUsername = document.getElementById("username").dataset.username;
 
-    // Ortak grup adı oluşturuluyor (alfabetik sıralama için Math.min ve Math.max kullanılıyor)
+    // Construct group name (sorting usernames alphabetically)
     const groupName = `chat_${[yourUsername, selectedFriend].sort().join('_')}`;
+
+    // Initialize the WebSocket connection
     const protocol = window.location.protocol === "https:" ? "wss" : "ws";
-    const chatSocket = new WebSocket(`${protocol}://${window.location.host}/ws/chat/${groupName}/`);
+    chatSocket = new WebSocket(`${protocol}://${window.location.host}/ws/chat/${groupName}/`);
 
-
-    chatSocket.onmessage = function (event) {
-        const data = JSON.parse(event.data);
-        const chatMessages = document.getElementById("chat-messages");
-
-        const messageElement = document.createElement("div");
-        messageElement.className = "message";
-        messageElement.textContent = `${data.sender}: ${data.message}`;
-        chatMessages.appendChild(messageElement);
-
-        chatMessages.scrollTop = chatMessages.scrollHeight;
+    chatSocket.onmessage = function(e) {
+        const data = JSON.parse(e.data);
+        console.log("Message received:", data);
+        // Handle incoming message data here
     };
 
-    chatSocket.onclose = function () {
-        console.error("WebSocket bağlantısı kapandı.");
+    chatSocket.onclose = function(e) {
+        console.error("WebSocket connection closed:", e);
     };
 
-    // MongoDB'den önceki mesajları çek
+    // Fetch previous messages from the database (e.g., MongoDB)
     fetch(`/fetch_messages?friend=${friendUsername}`)
         .then(response => response.json())
         .then(data => {
@@ -156,6 +151,7 @@ function selectFriend(friendUsername) {
         })
         .catch(error => console.error('Error fetching messages:', error));
 }
+
 // Dosya seçimi işlemi
 function handleFileSelect(event) {
     const fileInput = event.target;
