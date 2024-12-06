@@ -59,7 +59,7 @@ CHANNEL_LAYERS = {
         "CONFIG": {
             "hosts": [{
                 "address": "rediss://red-ct91um68ii6s73fp9ddg:4JyDdzXWTyZkxKmhgtKAkSfTS4JRD05V@oregon-redis.render.com:6379",
-                "ssl_cert_reqs": ssl.CERT_NONE,  # SSL sertifikası doğrulaması yapılmaz
+                "ssl_cert_reqs": False,  # SSL sertifikası doğrulaması yapılmaz
             }]
         }
     },
