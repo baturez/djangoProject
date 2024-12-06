@@ -9,7 +9,7 @@ https://docs.djangoproject.com/en/5.1/topics/settings/
 For the full list of settings and their values, see
 https://docs.djangoproject.com/en/5.1/ref/settings/
 """
-
+import ssl
 from pathlib import Path
 import os
 os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'djangoProject.settings')
@@ -55,14 +55,14 @@ INSTALLED_APPS = [
 ASGI_APPLICATION = 'djangoProject.asgi.application'
 CHANNEL_LAYERS = {
     "default": {
-    "BACKEND": "channels_redis.pubsub.RedisPubSubChannelLayer",
-    "CONFIG": {
-        "hosts":[{
-            "address": "rediss://red-ct91um68ii6s73fp9ddg:4JyDdzXWTyZkxKmhgtKAkSfTS4JRD05V@oregon-redis.render.com:6379",  # "REDIS_TLS_URL"
-            "ssl_cert_reqs": None,
-        }]
-    }
-},
+        "BACKEND": "channels_redis.core.RedisChannelLayer",
+        "CONFIG": {
+            "hosts": [{
+                "address": "rediss://red-ct91um68ii6s73fp9ddg:4JyDdzXWTyZkxKmhgtKAkSfTS4JRD05V@oregon-redis.render.com:6379",
+                "ssl_cert_reqs": ssl.CERT_NONE,  # SSL sertifikası doğrulaması yapılmaz
+            }]
+        }
+    },
 }
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
