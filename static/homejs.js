@@ -122,7 +122,7 @@ function selectFriend(friendUsername) {
     const groupName = `chat_${[yourUsername, selectedFriend].sort().join('_')}`;
 
     // WebSocket bağlantısını kurma
-    chatSocket = new WebSocket(`wss://${window.location.host}/ws/chat/${groupName}/`);
+    chatSocket = new WebSocket(`ws://${window.location.host}/ws/chat/${groupName}/`);
 
     chatSocket.onmessage = function (event) {
         const data = JSON.parse(event.data);
