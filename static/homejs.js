@@ -71,8 +71,8 @@ function submitComment(event, postId) {
     });
 }
 
-let currentStoryIndex = 0;
-const stories = [
+currentStoryIndex = 0;
+stories = [
     'https://picsum.photos/200/300',
     'https://picsum.photos/200/300?1',
     'https://picsum.photos/200/300?2',
@@ -103,21 +103,15 @@ function nextStory(event) {
 }
 
 
-
+let selectedFriend = null;  // Sadece bir kez tanımlanacak
 let chatSocket = null;
-let selectedFriend = null;
-
 function selectFriend(friendUsername) {
-    selectedFriend = friendUsername;
+    selectedFriend = friendUsername;  // Burada sadece değeri değiştiriyoruz
     document.getElementById("selected-friend-name").textContent = `Sohbet - ${friendUsername}`;
     document.getElementById("chat-section").style.display = "block";
 
-    // Chat geçmişini temizle
-    const chatMessages = document.getElementById("chat-messages");
-    chatMessages.innerHTML = "";  // Eski mesajları sil
-
     if (chatSocket) {
-        chatSocket.close();  // Eski WebSocket bağlantısını kapat
+        chatSocket.close();  // Eski bağlantıyı kapat
     }
 
     const yourUsername = document.getElementById("username").dataset.username;
@@ -130,6 +124,7 @@ function selectFriend(friendUsername) {
 
     chatSocket.onmessage = function (event) {
         const data = JSON.parse(event.data);
+        const chatMessages = document.getElementById("chat-messages");
 
         const messageElement = document.createElement("div");
         messageElement.className = "message";
@@ -147,6 +142,7 @@ function selectFriend(friendUsername) {
     fetch(`/fetch_messages?friend=${friendUsername}`)
         .then(response => response.json())
         .then(data => {
+            const chatMessages = document.getElementById("chat-messages");
             if (data.messages) {
                 data.messages.forEach(msg => {
                     const messageElement = document.createElement("div");
@@ -159,7 +155,6 @@ function selectFriend(friendUsername) {
         })
         .catch(error => console.error('Error fetching messages:', error));
 }
-
 // Dosya seçimi işlemi
 function handleFileSelect(event) {
     const fileInput = event.target;
@@ -224,12 +219,10 @@ function sendMessage() {
 }
 
 
-
 function toggleChat() {
     const chatBar = document.getElementById('chat-bar');
     const isVisible = chatBar.style.display === 'block';
     chatBar.style.display = isVisible ? 'none' : 'block';
 }
 
-document.getElementById('send-button').addEventListener('click', sendMessage);
 
