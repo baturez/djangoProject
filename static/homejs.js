@@ -103,7 +103,6 @@ function nextStory(event) {
 }
 
 
-let selectedFriend = null;  // Sadece bir kez tanımlanacak
 let chatSocket = null;
 function selectFriend(friendUsername) {
     selectedFriend = friendUsername;  // Burada sadece değeri değiştiriyoruz
@@ -182,7 +181,6 @@ function sendMessage() {
     const yourUsername = document.getElementById("username").dataset.username;
 
     if ((messageContent || file) && chatSocket && selectedFriend) {
-        console.log('Sending message:', messageContent, 'to:', selectedFriend);  // Log the message and recipient
 
         // Eğer dosya varsa, dosya verisini base64 olarak okuyalım
         if (file) {
