@@ -32,9 +32,9 @@ SECRET_KEY = 'django-insecure--&r(^6q3q$a$=*8^9sog=!q2n8adb%8qzo1d_afr=_9u#at(ui
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = ['*']
-
-
+ALLOWED_HOSTS = ['bartini.online', '.render.com']
+CSRF_TRUSTED_ORIGINS = ['https://bartini.online', 'https://*.render.com']
+SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
 
 # Application definition
 CORS_ALLOW_ALL_ORIGINS = True
@@ -58,7 +58,7 @@ CHANNEL_LAYERS = {
     "BACKEND": "channels_redis.pubsub.RedisPubSubChannelLayer",
     "CONFIG": {
         "hosts":[{
-            "address": "redis://red-ct91um68ii6s73fp9ddg:6379",  # "REDIS_TLS_URL"
+            "address": "rediss://red-ct91um68ii6s73fp9ddg:4JyDdzXWTyZkxKmhgtKAkSfTS4JRD05V@oregon-redis.render.com:6379",  # "REDIS_TLS_URL"
             "ssl_cert_reqs": None,
         }]
     }
@@ -74,10 +74,8 @@ MIDDLEWARE = [
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
     'corsheaders.middleware.CorsMiddleware',
-    'djangoProject.middleware.CustomHeaderMiddleware',
 
 ]
-CORS_ALLOW_ALL_ORIGINS = True
 SESSION_ENGINE = 'django.contrib.sessions.backends.db'
 
 ROOT_URLCONF = 'djangoProject.urls'
