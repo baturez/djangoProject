@@ -1,3 +1,4 @@
+import base64
 from datetime import datetime ,timedelta
 from channels.db import database_sync_to_async
 from django.http import JsonResponse, HttpResponseRedirect
@@ -1074,115 +1075,156 @@ def get_membership_requests(request, group_id):
 def send_message(request):
     if request.method == 'POST':
         try:
-            data = json.loads(request.body)
-            message_content = data.get('message')
-            recipient = data.get('recipient')
+            message_data = json.loads(request.POST.get('message_data', '{}'))
+            message_content = message_data.get('message')
+            recipient = message_data.get('recipient')
+            sender = message_data.get('sender')
 
-            sender = request.session.get('username')
+            # Dosya işlemleri
+            file = request.FILES.get('file')
+            file_name = file.name if file else None
+            file_size = file.size if file else None
+            file_data = file.read() if file else None
 
-            if not message_content or not recipient or not sender:
-                return JsonResponse({'success': False, 'error': 'Invalid input data'}, status=400)
+            if not recipient or not sender or (not message_content and not file):
+                return JsonResponse({'success': False, 'error': 'Eksik veri'}, status=400)
 
             # Mesajı MongoDB'ye kaydet
             message = {
                 'sender': sender,
                 'recipient': recipient,
                 'text': message_content,
+                'file_name': file_name,
+                'file_size': file_size,
+                'file_data': file_data,
                 'timestamp': timezone.now()
             }
             messages_collection.insert_one(message)
 
-            # WebSocket üzerinden mesajı alıcıya gönder
+            # WebSocket üzerinden mesajı gönder
             channel_layer = get_channel_layer()
-            async_to_sync(channel_layer.group_send)(  # WebSocket grubuna mesaj gönder
-                f'chat_{recipient}',  # Grup ismi, burada alıcının username'i
+            async_to_sync(channel_layer.group_send)(
+                f'chat_{recipient}',
                 {
-                    'type': 'chat_message',  # Mesaj tipi (consumer'da tanımlı)
-                    'message': message_content,  # Mesaj içeriği
-                    'sender': sender,  # Mesajın göndericisi
-                    'recipient': recipient,  # Mesajın alıcısı
+                    'type': 'chat_message',
+                    'message': message_content,
+                    'sender': sender,
+                    'recipient': recipient,
+                    'file_name': file_name,
+                    'file_size': file_size,
+                    'file_data': base64.b64encode(file_data).decode('utf-8') if file_data else None
                 }
             )
 
             return JsonResponse({'success': True})
 
         except Exception as e:
-            print(f"Error in send_message: {e}")
+            print(f"Hata (send_message): {e}")
             return JsonResponse({'success': False, 'error': str(e)}, status=500)
 
     return JsonResponse({'success': False}, status=400)
 
-@csrf_exempt
+
 def fetch_messages(request):
     try:
-        # Parametreleri al
         friend = request.GET.get('friend')
         last_timestamp_str = request.GET.get('last_timestamp')
 
         if not friend:
-            return JsonResponse({'success': False, 'error': 'Friend parameter is required'}, status=400)
+            return JsonResponse({'success': False, 'error': 'Arkadaş parametresi gerekli'}, status=400)
 
         user = request.session.get('username')
-
         if not user:
-            return JsonResponse({'success': False, 'error': 'User is not authenticated'}, status=400)
+            return JsonResponse({'success': False, 'error': 'Kullanıcı doğrulanmadı'}, status=400)
 
-        # last_timestamp'ı datetime formatına çevir
         last_timestamp = None
         if last_timestamp_str:
             try:
                 last_timestamp = datetime.fromisoformat(last_timestamp_str)
             except ValueError:
-                return JsonResponse({'success': False, 'error': 'Invalid timestamp format'}, status=400)
+                return JsonResponse({'success': False, 'error': 'Geçersiz zaman formatı'}, status=400)
 
-        # MongoDB'den mesajları çek
+        # Fetch messages from MongoDB
         query = {
             '$or': [
                 {'sender': user, 'recipient': friend},
                 {'sender': friend, 'recipient': user}
             ]
         }
-
         if last_timestamp:
-            query['timestamp'] = {'$gt': last_timestamp}  # Zaman damgasına göre filtrele
+            query['timestamp'] = {'$gt': last_timestamp}
 
-        messages = list(messages_collection.find(query).sort('timestamp', 1))  # Mesajları zaman sırasına göre sırala
+        messages = list(messages_collection.find(query).sort('timestamp', 1))
 
-        # Mesajları formatla
-        if messages:
-            formatted_messages = [
-                {
-                    'sender': msg['sender'],
-                    'text': msg['text'],
-                    'timestamp': msg['timestamp'].isoformat()  # Zaman damgasını ISO formatına çevir
-                }
-                for msg in messages
-            ]
-            return JsonResponse({'messages': formatted_messages})
+        formatted_messages = []
+        for msg in messages:
+            formatted_message = {
+                'sender': msg['sender'],
+                'recipient': msg['recipient'],
+                'text': msg.get('text', ''),
+                'file_name': msg.get('file_name'),
+                'file_size': msg.get('file_size'),
+                'file_type': msg.get('file_type'),
+                'timestamp': msg['timestamp'].isoformat()
+            }
 
-        return JsonResponse({'messages': []})
+            # Check if file data exists and encode to base64 if it's in bytes
+            file_data = msg.get('file_data')
+            if file_data:
+                if isinstance(file_data, bytes):  # Ensure the file data is in bytes
+                    formatted_message['file_data'] = base64.b64encode(file_data).decode('utf-8')
+                else:
+                    formatted_message['file_data'] = file_data  # Assume it's already a string (base64 encoded)
+
+            formatted_messages.append(formatted_message)
+
+        return JsonResponse({'messages': formatted_messages})
 
     except Exception as e:
-        print(f"Error in fetch_messages: {e}")
-        return JsonResponse({'success': False, 'error': 'Internal server error'}, status=500)
+        print(f"Error (fetch_messages): {e}")
+        return JsonResponse({'success': False, 'error': 'Sunucu hatası'}, status=500)
+
 @database_sync_to_async
-def save_message(sender, recipient, message):
+def save_message(sender, recipient, message, file_name=None, file_size=None, file_data=None):
     message_data = {
         'sender': sender,
         'recipient': recipient,
         'text': message,
+        'file_name': file_name,
+        'file_size': file_size,
+        'file_data': file_data,
         'timestamp': timezone.now()
     }
     messages_collection.insert_one(message_data)
 
-def save_group_message(group_id, sender, message):
-        message_data = {
-            'group_id': group_id,
-            'sender': sender,
-            'text': message,
-            'timestamp': datetime.now()
-        }
-        messages_collection.insert_one(message_data)
+
+@database_sync_to_async
+def save_message(sender, recipient, message, file_name=None, file_size=None, file_data=None):
+    # Eğer dosya verisi varsa, base64'ten byte dizisine dönüştür
+    if file_data:
+        try:
+            file_data = base64.b64decode(file_data)  # Base64'ü tekrar byte dizisine çevir
+            print("Decoded File Data Length:", len(file_data))  # Dosya uzunluğunu yazdır
+        except Exception as e:
+            print("Error decoding file data:", e)
+            file_data = None  # Eğer bir hata varsa, dosya verisini None yap
+
+    message_data = {
+        'sender': sender,
+        'recipient': recipient,
+        'text': message,
+        'file_name': file_name,
+        'file_size': file_size,
+        'file_data': file_data,
+        'timestamp': timezone.now()
+    }
+
+    # MongoDB'ye veri kaydetme işlemi
+    try:
+        result = messages_collection.insert_one(message_data)
+        print("Message Inserted with ID:", result.inserted_id)
+    except Exception as e:
+        print("Error inserting message:", e)
 @csrf_exempt
 def fetch_group_messages(request):
     group_id = request.GET.get('group_id')

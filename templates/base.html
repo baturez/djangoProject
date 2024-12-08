@@ -1,5 +1,5 @@
 {% load static %}
-
+{% load custom_filters %}
 <!DOCTYPE html>
 <html lang="tr">
 <head>
@@ -86,7 +86,25 @@
     </div>
     <div id="chat-section" style="display: none;">
         <div id="selected-friend-name" style="font-weight: bold; margin-bottom: 10px;"></div>
-        <div class="chat-messages" id="chat-messages"></div>
+      <div class="chat-messages" id="chat-messages">
+    {% for message in messages %}
+        <div class="message">
+            <p><strong>{{ message.sender }}</strong>: {{ message.text }}</p>
+            
+            {% if message.file_name %}
+                <div>
+                    <p><strong>Dosya:</strong> {{ message.file_name }} ({{ message.file_size|divisibleby:1024|round_to:2 }} KB)</p>
+                    <!-- Download Button -->
+                    <button class="btn btn-success btn-sm" onclick="downloadFile('{{ message.file_name }}')">İndir</button>
+                </div>
+            {% else %}
+                <p>No file attached.</p>
+            {% endif %}
+        </div>
+    {% endfor %}
+</div>
+
+
         <div class="chat-input">
             <input type="text" id="message-input" class="form-control" placeholder="Mesajınızı yazın..." onkeypress="if(event.key === 'Enter') sendMessage();" />
             <button class="btn btn-primary mt-2" onclick="sendMessage()">Gönder</button>

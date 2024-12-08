@@ -31,7 +31,7 @@ SECRET_KEY = 'django-insecure--&r(^6q3q$a$=*8^9sog=!q2n8adb%8qzo1d_afr=_9u#at(ui
 
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
-
+APPEND_SLASH = False
 ALLOWED_HOSTS = ['bartini.online', '.render.com','bartini-1.onrender.com','localhost']
 CSRF_TRUSTED_ORIGINS = ['https://bartini.online', 'https://*.render.com','https://bartini-1.onrender.com']
 SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')

@@ -19,3 +19,11 @@ def get_post_id(post):
 def get_comment_id(comment):
     """Returns the comment ID as a string."""
     return str(comment.get('_id')) if '_id' in comment else None
+
+@register.filter
+def round_to(value, decimals=2):
+    """Rounds a number to the specified decimal places. Default is 2 decimals."""
+    try:
+        return round(float(value), decimals)
+    except (ValueError, TypeError):
+        return value
