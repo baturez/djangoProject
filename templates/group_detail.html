@@ -225,8 +225,8 @@ document.getElementById('event-form').addEventListener('submit', function(e) {
                 if (data.events.length > 0) {
                     data.events.forEach(event => {
                         const listItem = document.createElement('li');
-                        listItem.innerHTML = `<strong>${event.event_name}</strong> 
-                            <br><em>Başlangıç: ${event.start_time} - Bitiş: ${event.end_time}</em> 
+                        listItem.innerHTML = `<strong>${event.event_name}</strong>
+                            <br><em>Başlangıç: ${event.start_time} - Bitiş: ${event.end_time}</em>
                             <br><small>Oluşturan: ${event.created_by}</small>`;
                         eventsList.appendChild(listItem);
                     });
