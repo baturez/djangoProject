@@ -324,3 +324,17 @@ nav a:hover {
 .chat-message strong {
     color: #007bff;
 }
+.event-item {
+    background: #f9f9f9;
+    padding: 10px;
+    border: 1px solid #ddd;
+    margin-bottom: 10px;
+    border-radius: 5px;
+}
+.event-item h4 {
+    margin: 0;
+    font-size: 18px;
+}
+.event-item p {
+    margin: 5px 0;
+}

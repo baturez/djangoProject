@@ -21,7 +21,7 @@ from djangoProject.consumers import ChatConsumer, GroupChatConsumer
 from .views import logout, group_detail, request_membership, manage_requests, approve_request, reject_request, \
     get_membership_requests, groups, send_friend_request, accept_friend_request, \
     reject_friend_request, view_friends, search_friends, profile_view, fetch_group_messages, send_group_message, \
-    leave_group, remove_member
+    leave_group, remove_member, create_event, get_events
 from .views import add_group
 from django.conf import settings
 from django.conf.urls.static import static
@@ -52,6 +52,8 @@ urlpatterns = [
     path('group/<str:group_id>/request_membership/', request_membership, name='request_membership'),
     path('group/<str:group_id>/manage_requests/', manage_requests, name='manage_requests'),
     path('group/<str:group_id>/membership_requests/', get_membership_requests, name='get_membership_requests'),
+    path('create_event/',   create_event, name='create_event'),
+    path('get_events/', get_events, name='get_events'),
     path('request/<str:request_id>/approve/', approve_request, name='approve_request'),
     path('request/<str:request_id>/reject/', reject_request, name='reject_request'),
     path('send_friend_request/<str:username>/', send_friend_request, name='send_friend_request'),

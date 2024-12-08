@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import datetime ,timedelta
 from channels.db import database_sync_to_async
 from django.http import JsonResponse, HttpResponseRedirect
 from django.conf import settings
@@ -10,7 +10,7 @@ import bcrypt
 from django.core.files.storage import FileSystemStorage
 from .models import UserProfile
 from django.utils.decorators import method_decorator
-
+import pytz
 from bson import ObjectId
 from django.http import JsonResponse
 from django.utils import timezone
@@ -809,6 +809,96 @@ def group_detail(request, group_id):
         'req_col': req
 
     })
+events_collection = db['events']
+def create_event(request):
+    if request.method == "POST":
+        try:
+            # JSON verisini al
+            data = json.loads(request.body)
+            event_name = data.get('event_name')
+            event_duration = int(data.get('event_duration'))  # Etkinlik süresi (örneğin 5 saat)
+            group_id = data.get('group_id')
+
+            # Kullanıcı bilgilerini session'dan al
+            user_username = request.session.get('username')  # Kullanıcının oturumdaki adı
+
+            if not user_username:
+                return JsonResponse({"success": False, "error": "Kullanıcı bilgisi bulunamadı."})
+
+            # UTC zamanı al
+            utc_now = datetime.utcnow().replace(tzinfo=pytz.utc)
+
+            # Kullanıcı zaman dilimini al (örneğin, "Europe/Istanbul")
+            tz = pytz.timezone('Europe/Istanbul')
+
+            # UTC zamanı Istanbul saat dilimine çevir
+            current_time = utc_now.astimezone(tz)
+
+            # Başlangıç saati: şu anki zaman - 3 saat
+            start_time = current_time - timedelta(hours=-3)
+
+            # Bitiş saati: başlangıç + etkinlik süresi
+            end_time = start_time + timedelta(hours=event_duration)
+
+            # Etkinliği MongoDB'ye kaydet
+            events_collection.insert_one({
+                "event_name": event_name,
+                "event_duration": event_duration,
+                "start_time": start_time,  # Başlangıç saati (UTC olarak kaydedilecek)
+                "end_time": end_time,  # Bitiş saati (UTC olarak kaydedilecek)
+                "group_id": group_id,
+                "created_by": user_username,
+                "created_at": utc_now  # Etkinlik oluşturulma saati (UTC)
+            })
+
+            return JsonResponse({
+                "success": True,
+                "message": f"{event_name} etkinliği {user_username} tarafından oluşturuldu.",
+                "start_time": start_time.strftime('%Y-%m-%d %H:%M'),
+                "end_time": end_time.strftime('%Y-%m-%d %H:%M')
+            })
+
+        except Exception as e:
+            return JsonResponse({"success": False, "error": str(e)})
+
+    return JsonResponse({"success": False, "error": "Geçersiz istek!"})
+
+
+def get_events(request):
+    group_id = request.GET.get('group_id')
+    if group_id:
+        # Süresi dolmuş etkinlikleri sil
+        utc_now = datetime.utcnow().replace(tzinfo=pytz.utc)
+        events_collection.delete_many({"end_time": {"$lt": utc_now}})  # Bitiş zamanı geçmiş etkinlikleri sil
+
+        events = events_collection.find({"group_id": group_id})
+
+        event_list = []
+        for event in events:
+            start_time_local = None
+            end_time_local = None
+
+            # "start_time" ve "end_time" verilerini kontrol et
+            if "start_time" in event:
+                tz = pytz.timezone('Europe/Istanbul')
+                start_time_local = event["start_time"].astimezone(tz)
+
+            if "end_time" in event:
+                end_time_local = event["end_time"].astimezone(tz)
+
+            event_list.append({
+                "event_name": event.get("event_name", "Etkinlik adı yok"),
+                "start_time": start_time_local.strftime('%Y-%m-%d %H:%M') if start_time_local else "Bilinmiyor",
+                "end_time": end_time_local.strftime('%Y-%m-%d %H:%M') if end_time_local else "Bilinmiyor",
+                "created_by": event.get("created_by", "Bilinmiyor")
+            })
+
+        return JsonResponse({"events": event_list}, status=200)
+
+    return JsonResponse({"error": "Geçersiz grup kimliği"}, status=400)
+
+
+
 @app.route('/check_request_status', methods=['GET'])
 def check_request_status():
     group_id = request.args.get('group_id')
