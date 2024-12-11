@@ -385,3 +385,19 @@ nav a:hover {
         font-size: 12px; /* Adjust profile text */
     }
 }
+
+#upload-progress {
+    width: 100%;
+    background-color: #f3f3f3;
+    border-radius: 5px;
+    margin-top: 10px;
+}
+
+#progress-bar {
+    height: 20px;
+    background-color: green;
+    border-radius: 5px;
+    text-align: center;
+    color: white;
+    line-height: 20px;
+}

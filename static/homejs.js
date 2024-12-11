@@ -124,14 +124,14 @@ function selectFriend(friendUsername) {
     chatSocket = new WebSocket(`wss://${window.location.host}/ws/chat/${groupName}/`);
 
     // Mesaj alma işlevi
-    chatSocket.onmessage = function (event) {
+       chatSocket.onmessage = function (event) {
         const data = JSON.parse(event.data);
         displayMessage(data);
     };
 
     chatSocket.onclose = function () {
-        console.error("WebSocket bağlantısı kapandı.");
-    };
+    console.error("WebSocket bağlantısı kapandı.");
+};
 
     fetchMessages(friendUsername, chatMessages);
 }
@@ -244,11 +244,15 @@ function sendMessage() {
         } else {
             sendTextMessage(messageContent, yourUsername);
         }
-        messageInput.value = "";  // Mesaj girişini temizle
+
+        // Giriş alanlarını sıfırla
+        messageInput.value = "";
+
     } else {
         alert("Mesaj veya dosya göndermek için lütfen bir içerik seçin.");
     }
 }
+
 
 // Dosya içeren mesaj gönderme
 function sendFileMessage(file, messageContent, yourUsername) {
@@ -275,12 +279,36 @@ function sendFileMessage(file, messageContent, yourUsername) {
 
 // Yalnızca metin mesajı gönder
 function sendTextMessage(messageContent, yourUsername) {
-    chatSocket.send(JSON.stringify({
-        message: messageContent,
-        recipient: selectedFriend,
-        sender: yourUsername
-    }));
+    try {
+        // Geçici "gönderiliyor..." mesajını göster
+        const chatMessages = document.getElementById("chat-messages");
+        const tempMessage = document.createElement("div");
+        tempMessage.className = "message temp-message";
+        tempMessage.textContent = "gönderiliyor...";  // Geçici gönderiliyor mesajı
+        chatMessages.appendChild(tempMessage);
+        chatMessages.scrollTop = chatMessages.scrollHeight;  // Otomatik kaydırma
+
+        // Mesajı WebSocket üzerinden gönder
+        chatSocket.send(JSON.stringify({
+            message: messageContent,
+            recipient: selectedFriend,
+            sender: yourUsername
+        }));
+
+        // Mesaj gönderildiğinde güncelleme yapılacak
+        chatSocket.onmessage = function (event) {
+            const data = JSON.parse(event.data);
+            if (data.message) {
+                tempMessage.textContent = `${data.sender}: ${data.message || ''}`;  // Gerçek mesaj içeriği
+            }
+        };
+
+    } catch (error) {
+        console.error("Metin mesajı gönderme hatası:", error);
+        alert("Mesaj gönderilemedi. Bağlantınızı kontrol edin.");
+    }
 }
+
 
 
 

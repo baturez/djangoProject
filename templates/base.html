@@ -111,6 +111,11 @@
         </div>
         <!-- Dosya Yükleme -->
         <div class="file-upload mt-3">
+            <!-- Yükleme ilerleme çubuğu -->
+            <div id="upload-progress" style="display: none;">
+                <div id="progress-bar" style="width: 0%; height: 20px; background-color: green;"></div>
+            </div>
+        
             <input type="file" id="file-input" class="form-control" onchange="handleFileSelect(event)" />
             <div id="file-info" style="display: none; margin-top: 10px;">
                 <span id="file-name"></span>

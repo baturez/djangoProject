@@ -140,23 +140,22 @@ class ChatConsumer(AsyncWebsocketConsumer):
 
 
 # MongoDB'ye dosya kaydetme işlemi
-@database_sync_to_async
-def save_file_to_mongo(sender, recipient, file_name, file_size, file_type, file_data):
-    # MongoDB'ye kaydedilecek mesaj verisi
-    message = {
-        'sender': sender,
-        'recipient': recipient,
-        'file_name': file_name,
-        'file_size': file_size,
-        'file_type': file_type,
-        'file_data': file_data,  # Base64 encoded file data
-        'timestamp': timezone.now()
+async def save_file_to_mongo(sender, recipient, file_name, file_size, file_type, file_data):
+    # Base64 verisini çözerek dosya verisini alıyoruz
+    file_data_bytes = base64.b64decode(file_data)
+
+    # Dosya verisini MongoDB'ye kaydediyoruz
+    document = {
+        "sender": sender,
+        "recipient": recipient,
+        "file_name": file_name,
+        "file_size": file_size,
+        "file_type": file_type,
+        "file_data": file_data_bytes  # Dosya içeriği
     }
 
-    # Save message to MongoDB
-    messages_collection.insert_one(message)
-
-    return message
+    # Veriyi senkron olarak MongoDB'ye kaydediyoruz
+    messages_collection.insert_one(document)
 class GroupChatConsumer(AsyncWebsocketConsumer):
     async def connect(self):
         self.group_name = self.scope['url_route']['kwargs']['group_id']

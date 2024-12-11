@@ -54,15 +54,18 @@ INSTALLED_APPS = [
 ASGI_APPLICATION = 'djangoProject.asgi.application'
 CHANNEL_LAYERS = {
     "default": {
-    "BACKEND": "channels_redis.pubsub.RedisPubSubChannelLayer",
-    "CONFIG": {
-        "hosts":[{
-            "address": "rediss://red-ct91um68ii6s73fp9ddg:4JyDdzXWTyZkxKmhgtKAkSfTS4JRD05V@oregon-redis.render.com:6379",  # "REDIS_TLS_URL"
-            "ssl_cert_reqs": None,
-        }]
-    }
-},
+        "BACKEND": "channels_redis.core.RedisChannelLayer",  # "channels_redis.pubsub.RedisPubSubChannelLayer" yerine
+        "CONFIG": {
+            "hosts": [
+                {
+                    "address": "rediss://red-ct91um68ii6s73fp9ddg:4JyDdzXWTyZkxKmhgtKAkSfTS4JRD05V@oregon-redis.render.com:6379",  # Rediss bağlantı adresiniz
+                    "ssl_cert_reqs": None,  # SSL sertifikası gereksizse None yapılabilir
+                }
+            ],
+        },
+    },
 }
+
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
     'whitenoise.middleware.WhiteNoiseMiddleware',
