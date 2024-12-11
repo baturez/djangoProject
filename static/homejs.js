@@ -141,8 +141,27 @@ function displayMessage(data) {
     const messageElement = document.createElement("div");
     messageElement.className = "message";
 
-    const messageText = `${data.sender}: ${data.message || ''}`;
-    messageElement.textContent = messageText;
+    // Gönderenin ismini mavi yapalım (Eğer mesajı biz göndermişsek)
+    const senderElement = document.createElement("strong");
+
+    const yourUsername = document.getElementById("username").dataset.username; // Kullanıcının ismini al
+
+    if (data.sender === yourUsername) {
+        // Eğer bu mesaj senin gönderdiğin bir mesaj ise
+        senderElement.textContent = `You: `;
+        senderElement.classList.add("sender"); // Kendi ismini mavi yapmak için
+    } else {
+        // Eğer mesaj karşı taraftan geldiyse
+        senderElement.textContent = `${data.sender}: `;
+        senderElement.classList.add("receiver"); // Karşıdaki göndereni yeşil yapmak için
+    }
+
+    messageElement.appendChild(senderElement);
+
+    // Mesajın metnini ekleyelim
+    const messageText = document.createElement("span");
+    messageText.textContent = data.message || '';
+    messageElement.appendChild(messageText);
 
     // Eğer mesajda dosya varsa, dosya ekle
     if (data.file_name && data.file_data) {
@@ -203,20 +222,54 @@ function notifyFileDownloaded(fileName) {
 
 // MongoDB'den mesajları çek
 function fetchMessages(friendUsername, chatMessages) {
-    fetch(`/fetch_messages?friend=${friendUsername}`)
-        .then(response => response.json())
-        .then(data => {
-            if (data.messages) {
-                data.messages.forEach(msg => {
-                    const messageElement = document.createElement("div");
-                    messageElement.className = "message";
-                    messageElement.textContent = `${msg.sender}: ${msg.text}`;
-                    chatMessages.appendChild(messageElement);
-                });
-                chatMessages.scrollTop = chatMessages.scrollHeight;
-            }
-        })
-        .catch(error => console.error('Mesajları çekerken hata oluştu:', error));
+    fetch('/fetch_messages?friend=' + friendUsername)
+    .then(response => response.json())
+    .then(data => {
+        if (data.messages) {
+            // Eski mesajları temizle
+            chatMessages.innerHTML = '';
+
+            // Mesajları tersten ekleyerek en alta ekleyelim
+            data.messages.forEach(msg => {
+                const messageElement = document.createElement("div");
+                messageElement.className = "message";
+
+                // Gönderenin ismini mavi yapalım (Eğer mesajı biz göndermişsek)
+                const senderElement = document.createElement("strong");
+
+                const yourUsername = document.getElementById("username").dataset.username; // Kullanıcının ismini al
+
+                if (msg.sender === yourUsername) {
+                    // Eğer bu mesaj senin gönderdiğin bir mesaj ise
+                    senderElement.textContent = `You: `;
+                    senderElement.classList.add("sender"); // Kendi ismini mavi yapmak için
+                } else {
+                    // Eğer mesaj karşı taraftan geldiyse
+                    senderElement.textContent = `${msg.sender}: `;
+                    senderElement.classList.add("receiver"); // Karşıdaki göndereni yeşil yapmak için
+                }
+
+                messageElement.appendChild(senderElement);
+
+                // Mesajın metnini ekleyelim
+                const messageText = document.createElement("span");
+                messageText.textContent = msg.text || '';
+                messageElement.appendChild(messageText);
+
+                // Dosya varsa, dosyayı ekle
+                if (msg.file_name && msg.file_data) {
+                    addFileToMessage(messageElement, msg);
+                }
+
+                // Yeni mesajı en alta ekleyelim
+                chatMessages.appendChild(messageElement);
+            });
+
+            // Mesajları ekledikten sonra, mesajı en altta tutmak için kaydırma
+            chatMessages.scrollTop = chatMessages.scrollHeight;
+        }
+    })
+    .catch(error => console.error('Mesajları çekerken hata oluştu:', error));
 }
 
 // Dosya seçimi işlevi

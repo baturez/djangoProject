@@ -1165,7 +1165,7 @@ def fetch_messages(request):
                 'file_name': msg.get('file_name'),
                 'file_size': msg.get('file_size'),
                 'file_type': msg.get('file_type'),
-                'timestamp': msg['timestamp'].isoformat()
+                'timestamp': msg['timestamp'].isoformat() if 'timestamp' in msg else datetime.utcnow().isoformat()  # Varsayılan timestamp
             }
 
             # Check if file data exists and encode to base64 if it's in bytes
@@ -1182,7 +1182,7 @@ def fetch_messages(request):
 
     except Exception as e:
         print(f"Error (fetch_messages): {e}")
-        return JsonResponse({'success': False, 'error': 'Sunucu hatası'}, status=500)
+        return JsonResponse({'success': False, 'error': f'Sunucu hatası: {str(e)}'}, status=500)
 
 @database_sync_to_async
 def save_message(sender, recipient, message, file_name=None, file_size=None, file_data=None):

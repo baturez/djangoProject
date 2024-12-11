@@ -401,3 +401,11 @@ nav a:hover {
     color: white;
     line-height: 20px;
 }
+.sender {
+    color: blue;
+}
+
+/* Alıcının ismi yeşil */
+.recipient {
+    color: green;
+}
