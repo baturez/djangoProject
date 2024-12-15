@@ -37,37 +37,46 @@ function submitReply(event, postId, commentId) {
     });
 }
 function submitComment(event, postId) {
-    event.preventDefault();
+    event.preventDefault();  // Prevent the default form submission
+
     const form = event.target;
-    const commentContent = form.comment_content.value;
+    const commentContent = form.comment_content.value;  // Get the content of the comment
 
     fetch(form.action, {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json',
-            'X-CSRFToken': form.querySelector('[name=csrfmiddlewaretoken]').value
+            'X-CSRFToken': form.querySelector('[name=csrfmiddlewaretoken]').value  // CSRF token
         },
         body: JSON.stringify({
             post_id: postId,
             comment_content: commentContent
         })
     })
-    .then(response => response.json())
+    .then(response => response.json())  // Parse the response as JSON
     .then(data => {
         if (data.success) {
             const commentsSection = document.getElementById('comments-' + postId);
+
+            // Append the new comment to the bottom of the comment section
             commentsSection.insertAdjacentHTML('beforeend', `
                 <div class="comment">
                     <strong>${data.commenter}</strong>: ${data.comment_content}
                     <small>${new Date().toLocaleString()}</small>
                 </div>
             `);
-            form.reset();
+
+            form.reset();  // Reset the form after submission
         } else {
-            alert(data.error_message || 'Failed to add comment.');
+            alert(data.error_message || 'Failed to add comment.');  // Show an error if something goes wrong
         }
+    })
+    .catch(error => {
+        console.error('Error:', error);  // Handle any errors that may occur during the fetch
+        alert('An error occurred while adding your comment.');
     });
 }
+
 
 currentStoryIndex = 0;
 stories = [
@@ -386,3 +395,6 @@ function toggleChat() {
     const isVisible = chatBar.style.display === 'block';
     chatBar.style.display = isVisible ? 'none' : 'block';
 }
+
+
+

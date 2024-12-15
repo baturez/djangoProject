@@ -7,91 +7,184 @@
 
 {% block content %}
       <link rel="stylesheet" href="{% static 'profile.css' %}">
-    
+
     <link rel="stylesheet" href="{% static 'css/bootstrap.min.css' %}">
-    
+    <div class="row">
+<div class="col-12 col-md-6 content">
     <div id="login-container">
-        <div class="profile-img">   <img src="{{ user.profile_picture }}" alt="Profil Resmi" style="max-width: 100px;"></div>
-        <h1>{{ username }}</h1>
-        <div class="description">
-            <h1 style="font-size: 15px">E-Posta: {{ email }}</h1>
-        </div>
-        <button onclick="window.location.href='/home'">Ana Sayfa</button>
-    <form id="profilePictureForm" enctype="multipart/form-data" method="POST" action="{% url 'upload_profile_picture' %}">
-    {% csrf_token %}
-    <input type="file" name="profile_picture" accept="image/*" required>
-    <button type="submit">Profil Fotoğrafı Yükle</button>
-</form>
+    <div class="profile-img">
+        <img src="{{ user.profile_picture }}" alt="Profil Resmi" style="max-width: 100px;">
     </div>
+    <h1>{{ username }}</h1>
+    <div class="description">
+        <h2>E-Posta: {{ email }}</h2>
+    </div>
+    <button onclick="window.location.href='/home'">Ana Sayfa</button>
+        <button onclick="window.location.href='/home'">İsim Değiştir</button>
+        <button onclick="window.location.href='/home'">Hesabı Sil</button>
 
-    <!-- Arkadaşlık İstekleri Bölümü -->
-   <div id="friend-requests-container">
-    <h2>Arkadaşlık İsteklerim</h2>
-<ul>
-    {% for request in requests %}
-        <li>
-            {{ request.from_user }}
-            <a href="{% url 'accept_friend_request' request|get_object_id %}">Kabul Et</a>
-            <a href="{% url 'reject_friend_request' request|get_object_id %}">Reddet</a>
-        </li>
-    {% empty %}
-        <li>Henüz arkadaşlık isteğiniz yok.</li>
-    {% endfor %}
-</ul>
-
+    <form id="profilePictureForm" enctype="multipart/form-data" method="POST" action="{% url 'upload_profile_picture' %}">
+        {% csrf_token %}
+    </form>
 </div>
+
+<!-- Arkadaşlık İstekleri Bölümü -->
+<div id="friend-requests-container">
+    <button id="toggle-requests-button" class="toggle-button">Arkadaşlık İsteklerim</button>
+    <div id="friend-requests-list" class="hidden">
+        <ul>
+            {% for request in requests %}
+                <li class="friend-request-item">
+                    <span class="friend-username">{{ request.from_user }}</span>
+                    <div class="request-actions">
+                        <a href="{% url 'accept_friend_request' request|get_object_id %}" class="accept-button">Kabul Et</a>
+                        <a href="{% url 'reject_friend_request' request|get_object_id %}" class="reject-button">Reddet</a>
+                    </div>
+                </li>
+            {% empty %}
+                <li class="no-requests">Henüz arkadaşlık isteğiniz yok.</li>
+            {% endfor %}
+        </ul>
+    </div>
+</div>
+
 
     <!-- Arkadaşlar Bölümü -->
 <div id="friends-container">
-    <h2>Arkadaşlarım</h2>
-    <ul id="friends-list">
+    <h4 id="friends-toggle" class="friends-header">Arkadaşlarım</h4>
+    <ul id="friends-p-list" class="friends-p-list">
         {% for friend in friends %}
-            <li id="friend-{{ friend.username }}">
-                {{ friend.username }}
-                <button class="remove-button" data-friend="{{ friend.username }}">Çıkar</button>
+            <li id="friend-{{ friend.username }}" class="friend-item">
+                <span class="friend-username">{{ friend.username }}</span>
+                <button class="remove-button" data-friend="{{ friend.username }}">
+                    <i class="fas fa-user-minus"></i>
+                </button>
             </li>
         {% empty %}
-            <li>Henüz arkadaşınız yok.</li>
+            <li class="no-friends">Henüz arkadaşınız yok.</li>
         {% endfor %}
     </ul>
 </div>
+</div>
 
-
-    <!-- Arkadaş Arama Bölümü -->
+<div class="col-12 col-md-6 content">
+<!-- Arkadaş Arama Bölümü -->
 <div id="friend-search-container">
     <h2>Arkadaş Ara</h2>
-    <form action="{% url 'search_friends' %}" method="post">
+    <form action="{% url 'search_friends' %}" method="post" class="search-form">
         {% csrf_token %}
         <input type="text" name="search_query" placeholder="Kullanıcı adıyla ara" required>
         <button type="submit">Ara</button>
     </form>
-    {% if search_results %}
-    <h3>Arama Sonuçları:</h3>
-    <ul>
-        {% for user in search_results %}
-            <li>
-                {{ user.username }}
-                <form action="{% url 'send_friend_request' user.username %}" method="post" style="display:inline;">
-                    {% csrf_token %}
-                    {% if user.username in friens %}
-                        <!-- Friend already exists in the friends list -->
-                        <button type="button" disabled>Arkadaşsınız</button>
-                        {% elif reqq.status == 'pending' %}
-                        <button type="button" disabled>istek gönderildi</button>
-                    {% else %}
-                        <button type="submit">Arkadaşlık İsteği Gönder</button>
-                    {% endif %}
-                </form>
-            </li>
-        {% endfor %}
-    </ul>
-{% elif search_query %}
-    <p>Arama Sonuçları Bulunamadı.</p>
 
-        <p>Arama sonuçları bulunamadı.</p>
+    {% if search_results %}
+        <h3>Arama Sonuçları:</h3>
+        <ul class="search-results-list">
+            {% for user in search_results %}
+                <li class="search-result-item">
+                    <span class="result-username">{{ user.username }}</span>
+                    <form action="{% url 'send_friend_request' user.username %}" method="post" style="display:inline;">
+                        {% csrf_token %}
+                        {% if user.username in friens %}
+                            <button type="button" class="status-button" disabled>Arkadaşsınız</button>
+                        {% elif reqq.status == 'pending' %}
+                            <button type="button" class="status-button" disabled>İstek Gönderildi</button>
+                        {% elif user.username == username %}
+
+                        {% else %}
+                            <button type="submit" class="send-request-button">Arkadaşlık İsteği Gönder</button>
+                        {% endif %}
+                    </form>
+                </li>
+            {% endfor %}
+        </ul>
+    {% elif search_query %}
+        <p>Arama Sonuçları Bulunamadı.</p>
     {% endif %}
 </div>
-<script>
+
+<div class="User-posts">
+  <div class="posts-container">
+  
+    {% if posts %}
+        {% for post in posts %}
+            {% if post.username == username %}
+        <div class="post">
+        <div class="post-content">
+            <div class="post-header">
+                <img src="https://picsum.photos/200" class="pp-img">
+                <h4>{{ post.username }}</h4> <small style="font-size: 10px">{{ post.created_at }}</small>
+            </div>
+
+            <p>{{ post.content }}</p>
+
+            <!-- Display media if available -->
+            {% if post.file_urls %}
+                <div class="post-media">
+                    {% for url in post.file_urls %}
+                        {% if url|regex_search:"\.(jpg|jpeg|png|gif)$" %}
+                        <div class="post-view">
+                            <img src="{{ url }}" alt="Image" loading="lazy" style="width: 100%; height: 100%; object-fit: contain; background: #000;">
+                        </div>
+                        {% elif url|regex_search:"\.(mp4|webm|ogg)$" %}
+                        <video controls preload="none" style="max-width: 100%; border-radius: 8px;">
+                            <source src="{{ url }}" type="video/mp4">
+                            Your browser does not support the video tag.
+                        </video>
+                        {% endif %}
+                    {% endfor %}
+                </div>
+            {% endif %}
+
+            <div class="post-footer">
+                <button class="like-btn" data-post-id="{{ post|get_post_id }}">
+    <img src="{% static 'images/like.png' %}" alt="Like"> <span>{{ post.likes }}</span>
+</button>
+                 <button class="delete-btn" onclick="deletePost('{{ post|get_post_id }}')">
+        <img src="{% static 'images/delete.png' %}" alt="Delete">
+    </button>
+                <button class="comment-btn" onclick="toggleComments('{{ post|get_post_id }}')">
+                    <img src="{% static 'images/comment.png' %}" alt="Comment"> {{ post.comment_count }}
+                </button>
+
+            </div>
+
+            <div class="comments-section" id="comments-{{ post|get_post_id }}" style="display: none;">
+                <h5>Comments</h5>
+                {% if post.comments %}
+                    {% for comment in post.comments %}
+                        <div class="comment">
+                            <strong>{{ comment.commenter }}</strong>: {{ comment.content }}
+                            <small>{{ comment.created_at }}</small>
+                        </div>
+                    {% endfor %}
+                {% else %}
+                    <p>No comments yet.</p>
+                {% endif %}
+
+                <!-- Add Comment Form -->
+                <form method="post" action="{% url 'add_comment' %}" class="add-comment-form" id="comment-form-{{ post|get_post_id }}" onsubmit="return submitComment(event, '{{ post|get_post_id }}')">
+                    {% csrf_token %}
+                    <input type="hidden" name="post_id" value="{{ post|get_post_id }}">
+                    <input type="text" name="comment_content" placeholder="Add a comment..." required>
+                    <button type="submit">Post Comment</button>
+                </form>
+            </div>
+
+
+        </div></div>
+  {% endif %}
+            
+        {% endfor %}
+    {% else %}
+        <p>Henüz paylaşım yapılmadı.</p>
+    {% endif %}
+</div>
+
+</div>
+</div>
+    </div>
+<script >
 document.addEventListener('DOMContentLoaded', () => {
         const buttons = document.querySelectorAll('.remove-button');
 
@@ -143,7 +236,120 @@ function showNotification(message) {
         notification.style.display = 'none';
     }, 3000);
 }
+document.getElementById("friends-toggle").addEventListener("click", function() {
+    var friendsList = document.getElementById("friends-p-list");
+    if (friendsList.style.display === "none" || friendsList.style.display === "") {
+        friendsList.style.display = "block"; // Aç
+    } else {
+        friendsList.style.display = "none"; // Kapat
+    }
+});
+document.getElementById("toggle-requests-button").addEventListener("click", function() {
+    var requestsList = document.getElementById("friend-requests-list");
+    // Toggle the visibility of the requests list
+    if (requestsList.style.display === "none" || requestsList.style.display === "") {
+        requestsList.style.display = "block";
+    } else {
+        requestsList.style.display = "none";
+    }
+});
+document.addEventListener('DOMContentLoaded', function () {
+  const posts = document.querySelectorAll('.post');
 
+  posts.forEach(post => {
+    const header = post.querySelector('.post-header'); // Post başlığını seç
+
+    header.addEventListener('click', function () {
+      const isExpanded = post.classList.contains('expanded');
+
+      // Tüm postlardan 'expanded' sınıfını kaldır
+      posts.forEach(p => p.classList.remove('expanded'));
+
+      // Yalnızca tıklanan postu aç (veya kapat)
+      if (!isExpanded) {
+        post.classList.add('expanded');
+      }
+    });
+
+    // Yorumlar sekmesini açma/kapatma fonksiyonu
+
+// CSRF token almak için fonksiyon
+
+
+  });
+});
+
+ $(document).on('click', '.like-btn', function() {
+    const postId = $(this).data('post-id');   // Ensure this is not an empty string
+    const button = $(this);
+
+    $.ajax({
+        type: 'POST',
+        url: '{% url "like_post" %}',
+        data: {
+            post_id: postId,  // Ensure the post_id is correctly passed here
+            csrfmiddlewaretoken: '{{ csrf_token }}'
+        },
+        success: function(response) {
+            if (response.success) {
+                button.html(`
+                    <img style="width: 20px" src="{% static 'images/like.png' %}"> ${response.likes}
+                `);
+            } else {
+                alert(response.error_message);
+            }
+        }
+    });
+});
 </script>
+
+<script type="text/javascript">
+    // Silme fonksiyonunu sayfa sonuna ekliyoruz
+    function deletePost(postId) {
+        const confirmation = confirm("Bu gönderiyi silmek istediğinizden emin misiniz?");
+        if (confirmation) {
+            // POST isteği ile backend'e gönder
+            fetch('/delete_post/', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': getCookie('csrftoken') // CSRF token'ı al
+                },
+                body: JSON.stringify({
+                    'post_id': postId
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    // Post silindi, sayfayı güncelle
+                    location.reload();
+                } else {
+                    alert("Post silinirken bir hata oluştu.");
+                }
+            })
+            .catch(error => {
+                console.error('Silme işlemi başarısız:', error);
+            });
+        }
+    }
+
+    // CSRF token almak için fonksiyon
+    function getCookie(name) {
+        let cookieValue = null;
+        if (document.cookie && document.cookie !== '') {
+            const cookies = document.cookie.split(';');
+            for (let i = 0; i < cookies.length; i++) {
+                const cookie = cookies[i].trim();
+                if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                    cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                    break;
+                }
+            }
+        }
+        return cookieValue;
+    }
+</script>
+
     <script src="{% static 'js/bootstrap.min.js' %}"></script>
 {% endblock %}

@@ -1,6 +1,7 @@
 import base64
 from datetime import datetime ,timedelta
 from channels.db import database_sync_to_async
+from PIL import Image
 from django.http import JsonResponse, HttpResponseRedirect
 from django.conf import settings
 from channels.layers import get_channel_layer
@@ -506,7 +507,8 @@ def profile_view(request):
         group_collection = db['groups']
         groups = group_collection.find()
         user = user_collection.find_one({"username": username})
-
+        post_collection = db[POST_COLLECTION]
+        posts = post_collection.find().sort("created_at", -1)
         # Arkadaşlık isteklerini al
         requests = list(friend_request_collection.find({'to_user': username, 'status': 'pending'}))
 
@@ -525,7 +527,8 @@ def profile_view(request):
                 'requests': requests,
                 'reqqq': reqqq,
                 'friends': friends,
-                'groups' : groups
+                'groups': groups,
+                'posts': posts
             }
             return render(request, 'profile.html', context)
         else:
@@ -533,6 +536,33 @@ def profile_view(request):
             return render(request, 'profile.html', {'error_message': error_message})
     else:
         return redirect('/login')
+
+@csrf_exempt
+def delete_post(request):
+    if request.method == 'POST':
+        # JSON verisini al
+        post_data = json.loads(request.body)
+        post_id = post_data.get('post_id')
+
+        if post_id:
+            try:
+                # MongoDB bağlantısı
+                client = MongoClient(MONGO_URI)
+                db = client[DATABASE_NAME]
+                post_collection = db[POST_COLLECTION]
+
+                # Postu sil
+                result = post_collection.delete_one({"_id": ObjectId(post_id)})
+
+                if result.deleted_count == 1:
+                    return JsonResponse({'success': True})
+                else:
+                    return JsonResponse({'success': False, 'message': 'Post bulunamadı.'})
+            except Exception as e:
+                return JsonResponse({'success': False, 'message': str(e)})
+        else:
+            return JsonResponse({'success': False, 'message': 'Post ID alınamadı.'})
+    return JsonResponse({'success': False, 'message': 'Geçersiz istek.'})
 @csrf_exempt
 def remove_friend(request):
     if request.method == "POST":

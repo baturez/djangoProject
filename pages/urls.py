@@ -75,6 +75,7 @@ urlpatterns = [
     path('leave_group/<str:group_id>/', leave_group, name='leave_group'),
     path('remove-member/<str:group_id>/', remove_member, name='remove_member'),
     path('remove_friend/', views.remove_friend, name='remove_friend'),
+    path('delete_post/', views.delete_post, name='delete_post'),
 ]
 websocket_urlpatterns = [
     path('ws/chat/<str:friend_username>/', ChatConsumer.as_asgi()),

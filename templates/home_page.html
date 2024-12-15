@@ -7,6 +7,7 @@
 {% block content %}
      <link rel="stylesheet" href="{% static 'home.css' %}">
     <script src="{% static 'homejs.js' %}"></script>
+
 <!-- Orta kısımda hikayeler ve post paylaşımı alanı -->
 <div class="story-container">
     <div class="story" onclick="showLargeStory(0)">
@@ -20,35 +21,49 @@
     </div>
 </div>
 
-
 <div class="large-story-container" id="largeStoryContainer" style="display: none;" onclick="closeLargeStory()">
     <span class="close-btn">&times;</span>
     <img id="largeStoryImage" src="" alt="Büyütülmüş Hikaye" onclick="nextStory(event)">
 </div>
 
-   <div class="create-post">
+<!-- Post oluşturma -->
+<div class="create-post">
     <form id="postForm" method="POST" action="{% url 'add_post' %}" enctype="multipart/form-data">
         {% csrf_token %}
         <textarea name="post_content" placeholder="Neler Düşünüyorsunuz?" required></textarea>
 
         <!-- Hidden inputs for image and video uploads -->
-        <input type="file" id="photoInput" name="post_files" accept="image/*" style="display: none;">
-        <input type="file" id="videoInput" name="post_files" accept="video/*" style="display: none;">
+        <div class="upload-section">
+    <!-- Fotoğraf Yükleme -->
+    <button type="button" class="upload-btn photo-btn" onclick="document.getElementById('photoInput').click();">
+        <i class="fa fa-camera"></i> Fotoğraf Yükle
+    </button>
+    <input type="file" id="photoInput" name="post_files" accept="image/*" style="display: none;" onchange="previewFile('photo')">
 
-        <button type="submit" class="send-btn">Gönder</button>
+    <!-- Video Yükleme -->
+    <button type="button" class="upload-btn video-btn" onclick="document.getElementById('videoInput').click();">
+        <i class="fa fa-video"></i> Video Yükle
+    </button>
+    <input type="file" id="videoInput" name="post_files" accept="video/*" style="display: none;" onchange="previewFile('video')">
+</div>
+
+<!-- Ön İzleme Alanı -->
+<div id="previewArea"></div>
+
+<!-- Gönder Butonu -->
+<div class="submit">
+    <button class="send-btn">Gönder</button>
+</div>
+        
+
+        
 
         <!-- Icons to toggle photo or video input -->
-        <a href="#" onclick="showInput('photo')">
-            <img style="width: 25px" src="{% static 'images/camera.png' %}">
-        </a>
-        <a href="#" onclick="showInput('video')" style="margin-left: 5px;">
-            <img style="width: 25px" src="{% static 'images/video.png' %}">
-        </a>
+        
     </form>
 </div>
 
 <!-- Postların listelenmesi -->
-
 <div class="posts-container">
     {% if posts %}
         {% for post in posts %}
@@ -64,45 +79,50 @@
                 <div class="post-media">
                     {% for url in post.file_urls %}
                         {% if url|regex_search:"\.(jpg|jpeg|png|gif)$" %}
-                            <img src="{{ url }}" alt="Image" style="max-width: 100%; width: 450px; height: 250px">
+                        <div class="post-view">
+                            <img src="{{ url }}" alt="Image" loading="lazy" style="width: 100%; height: 100%; object-fit: contain; background: #000;">
+                        </div>
                         {% elif url|regex_search:"\.(mp4|webm|ogg)$" %}
-                            <video controls style="max-width: 100%;">
-                                <source src="{{ url }}" type="video/mp4">
-                                Your browser does not support the video tag.
-                            </video>
+                        <video controls preload="none" style="max-width: 100%; border-radius: 8px;">
+                            <source src="{{ url }}" type="video/mp4">
+                            Your browser does not support the video tag.
+                        </video>
                         {% endif %}
-
                     {% endfor %}
                 </div>
-
             {% endif %}
-<div class="post-footer">
-    <button style="background-color: white; border:white " class="like-btn" data-post-id="{{ post|get_post_id }}"><img style="width: 20px" src="{% static 'images/like.png' %}"> {{ post.likes }}</button>
-    <button style="background-color: white; border:white " class="comment-btn" onclick="toggleComments('{{ post|get_post_id }}')"><img style="width: 20px" src="{% static 'images/comment.png' %}"> {{ post.comment_count }}</button>
 
-</div>
-        <div class="comments-section" id="comments-{{ post|get_post_id }}" style="display: none;">
-        <h5>Comments</h5>
-        {% if post.comments %}
-            {% for comment in post.comments %}
-                <div class="comment">
-                    <strong>{{ comment.commenter }}</strong>: {{ comment.content }}
-                    <small>{{ comment.created_at }}</small>
-                
-                </div>
-            {% endfor %}
-        {% else %}
-            <p>No comments yet.</p>
-        {% endif %}
+            <div class="post-footer">
+                <button class="like-btn" data-post-id="{{ post|get_post_id }}">
+    <img src="{% static 'images/like.png' %}" alt="Like"> <span>{{ post.likes }}</span>
+</button>
+                <button class="comment-btn" onclick="toggleComments('{{ post|get_post_id }}')">
+                    <img src="{% static 'images/comment.png' %}" alt="Comment"> {{ post.comment_count }}
+                </button>
+            </div>
 
-        <!-- Add Comment Form -->
-        <form method="post" action="{% url 'add_comment' %}" class="add-comment-form" onsubmit="return submitComment(event, '{{ post|get_post_id }}')">
-            {% csrf_token %}
-            <input type="hidden" name="post_id" value="{{ post|get_post_id }}">
-            <input type="text" name="comment_content" placeholder="Add a comment..." required>
-            <button type="submit">Post Comment</button>
-        </form>
-    </div>
+            <div class="comments-section" id="comments-{{ post|get_post_id }}" style="display: none;">
+                <h5>Comments</h5>
+                {% if post.comments %}
+                    {% for comment in post.comments %}
+                        <div class="comment">
+                            <strong>{{ comment.commenter }}</strong>: {{ comment.content }}
+                            <small>{{ comment.created_at }}</small>
+                        </div>
+                    {% endfor %}
+                {% else %}
+                    <p>No comments yet.</p>
+                {% endif %}
+
+                <!-- Add Comment Form -->
+                <form method="post" action="{% url 'add_comment' %}" class="add-comment-form" id="comment-form-{{ post|get_post_id }}" onsubmit="return submitComment(event, '{{ post|get_post_id }}')">
+                    {% csrf_token %}
+                    <input type="hidden" name="post_id" value="{{ post|get_post_id }}">
+                    <input type="text" name="comment_content" placeholder="Add a comment..." required>
+                    <button type="submit">Post Comment</button>
+                </form>
+            </div>
+
             <small>{{ post.created_at }}</small>
         </div>
         {% endfor %}
@@ -113,55 +133,23 @@
 
 <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
 <script>
-   $(document).ready(function(){
-    $('#postForm').submit(function(event){
-        event.preventDefault(); 
+document.addEventListener("DOMContentLoaded", function () {
+    const lazyVideos = document.querySelectorAll("video");
 
-        var formData = new FormData(this); 
-
-        $.ajax({
-            type: 'POST',
-            url: "{% url 'add_post' %}",
-            data: formData,
-            processData: false, 
-            contentType: false, 
-            success: function(response) {
-    if (response.success) {
-        const newPost = `
-            <div class="post">
-                <div class="post-header">
-                    <img src="https://picsum.photos/200" class="pp-img">
-                    <h4>${response.username}</h4>
-                </div>
-                <p>${response.post_content}</p>
-                ${response.file_urls.map(url => `
-                    <div class="post-media">
-                        ${url.match(/\.(jpg|jpeg|png|gif)$/) ?
-                            `<img src="${url}" alt="Image" style="max-width: 100%;">` :
-                            `<video controls style="max-width: 100%;">
-                                <source src="${url}" type="video/mp4">
-                                Your browser does not support the video tag.
-                            </video>`
-                        }
-                    </div>
-                `).join('')}
-                <small>Şimdi</small>
-            </div>
-        `;
-        $('.posts-container').prepend(newPost);
-        $('textarea[name="post_content"]').val('');
-        $('#photoInput').val('');
-        $('#videoInput').val('');
-    } else {
-        alert(response.error_message);
-    }
-}
+    const videoObserver = new IntersectionObserver((entries, observer) => {
+        entries.forEach(entry => {
+            if (entry.isIntersecting) {
+                const video = entry.target;
+                video.preload = "metadata";
+                videoObserver.unobserve(video);
+            }
         });
     });
-});
 
+    lazyVideos.forEach(video => videoObserver.observe(video));
 
-      function showInput(type) {
+    // The showInput function should be defined so it works properly when toggling inputs
+    window.showInput = function(type) {
         document.getElementById('photoInput').style.display = 'none';
         document.getElementById('videoInput').style.display = 'none';
 
@@ -170,27 +158,145 @@
         } else if (type === 'video') {
             document.getElementById('videoInput').style.display = 'block';
         }
-    }
+    };
+
+    // Toggle comments section visibility
+    window.toggleComments = function(postId) {
+        const commentSection = document.getElementById('comments-' + postId);
+        commentSection.style.display = commentSection.style.display === 'block' ? 'none' : 'block';
+    };
+});
+
+$(document).ready(function(){
+    $('#postForm').submit(function(event){
+        event.preventDefault(); // Prevent the form from submitting
+
+        var formData = new FormData(this); // Create a FormData object
+
+        $.ajax({
+            type: 'POST',
+            url: "{% url 'add_post' %}", // URL to add a post
+            data: formData,
+            processData: false, // Don't process data
+            contentType: false, // Don't set content-type header
+            success: function(response) {
+                if (response.success) {
+                    document.getElementById('previewArea').innerHTML = '';
+                    document.getElementById('photoInput').value = '';
+                    document.getElementById('videoInput').value = '';
+                    const newPost = `
+                        <div class="post">
+                            <div class="post-header">
+                                <img src="https://picsum.photos/200" class="pp-img">
+                                <h4>${response.username}</h4>
+                            </div>
+                            <p>${response.post_content}</p>
+                            ${response.file_urls.map(url => `
+                                <div class="post-media">
+                                    ${url.match(/\.(jpg|jpeg|png|gif)$/) ?
+                                        `<img src="${url}" alt="Image" style="max-width: 100%;">` :
+                                        `<video controls style="max-width: 100%;">
+                                            <source src="${url}" type="video/mp4">
+                                            Your browser does not support the video tag.
+                                        </video>`
+                                    }
+                                </div>
+                            `).join('')}
+                            <small>Şimdi</small>
+                            <div class="post-footer">
+                               <button class="like-btn" data-post-id="${response.post_id}">
+                                    <img src="{% static 'images/like.png' %}" style="width: 20px;">
+                                    ${response.likes}
+                                </button>
+                                <button class="comment-btn" onclick="toggleComments('${response.post_id}')">
+                                    <img src="{% static 'images/comment.png' %}" alt="Comment"> ${response.comment_count}
+                                </button>
+                            </div>
+                            <div class="comments-section" id="comments-${response.post_id}" style="display: none;">
+                                <!-- Comments will go here -->
+                            </div>
+                        </div>
+                    `;
+                    $('.posts-container').prepend(newPost); // Add the new post to the top
+                    $('textarea[name="post_content"]').val(''); // Clear the post content field
+                    $('#photoInput').val(''); // Clear photo input
+                    $('#videoInput').val(''); // Clear video input
+                } else {
+                    alert(response.error_message); // Show error if post creation fails
+                }
+            }
+        });
+    });
+
+    // Like button functionality
     $(document).on('click', '.like-btn', function() {
-    const postId = $(this).data('post-id');   
-    const button = $(this); 
+    const postId = $(this).data('post-id');   // Ensure this is not an empty string
+    const button = $(this);
 
     $.ajax({
         type: 'POST',
-        url: '{% url "like_post" %}', 
+        url: '{% url "like_post" %}',
         data: {
-            post_id: postId,
-            csrfmiddlewaretoken: '{{ csrf_token }}' 
+            post_id: postId,  // Ensure the post_id is correctly passed here
+            csrfmiddlewaretoken: '{{ csrf_token }}'
         },
         success: function(response) {
             if (response.success) {
-                button.html(` <img style="width: 20px" src="{% static 'images/like.png' %}">${response.likes}`);  
+                button.html(`
+                    <img style="width: 20px" src="{% static 'images/like.png' %}"> ${response.likes}
+                `);
             } else {
                 alert(response.error_message);
             }
         }
     });
 });
+});
+function previewFile(type) {
+    const input = document.getElementById(type + 'Input');
+    const previewArea = document.getElementById('previewArea');
+    previewArea.innerHTML = ''; // Clear previous previews
+
+    if (input.files && input.files[0]) {
+        const file = input.files[0];
+        const reader = new FileReader();
+
+        reader.onload = function (e) {
+            let previewElement;
+            if (type === 'photo') {
+                previewElement = document.createElement('img');
+                previewElement.src = e.target.result;
+            } else if (type === 'video') {
+                previewElement = document.createElement('video');
+                previewElement.src = e.target.result;
+                previewElement.controls = true;
+            }
+
+            // Add classes for consistent size
+            previewElement.classList.add('preview-media');
+
+            const removeButton = document.createElement('button');
+            removeButton.textContent = 'Kaldır';
+            removeButton.type = 'button';
+            removeButton.className = 'remove-btn';
+            removeButton.onclick = function () {
+                input.value = ''; // Clear the file input
+                previewArea.innerHTML = ''; // Remove preview
+            };
+
+            // Create a wrapper for styling
+            const previewWrapper = document.createElement('div');
+            previewWrapper.classList.add('preview-wrapper');
+            previewWrapper.appendChild(previewElement);
+            previewWrapper.appendChild(removeButton);
+
+            previewArea.appendChild(previewWrapper);
+        };
+
+        reader.readAsDataURL(file);
+    }
+}
+
 </script>
 
 {% endblock %}
