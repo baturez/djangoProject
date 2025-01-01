@@ -21,7 +21,7 @@ from djangoProject.consumers import ChatConsumer, GroupChatConsumer
 from .views import logout, group_detail, request_membership, manage_requests, approve_request, reject_request, \
     get_membership_requests, groups, send_friend_request, accept_friend_request, \
     reject_friend_request, view_friends, search_friends, profile_view, fetch_group_messages, send_group_message, \
-    leave_group, remove_member, create_event, get_events
+    leave_group, remove_member, create_event, get_events, post_view, delete_account
 from .views import add_group
 from django.conf import settings
 from django.conf.urls.static import static
@@ -44,6 +44,8 @@ urlpatterns = [
     path('topics/', views.list_topics, name='topics'),
     path('add_post/', views.add_post, name='add_post'),
     path('logout/', logout, name='logout'),
+    path('post_view/', post_view, name='post_view'),
+    path('post/<str:post_id>/', views.post_view, name='post_view'),
     path('profile/', views.profile_view, name='profile'),
     path('profile/<str:username>/', profile_view, name='profile_view'),
     path('groups/', groups, name='groups'),
@@ -68,7 +70,7 @@ urlpatterns = [
     path('send_message/', views.send_message, name='send_message'),
     path('fetch_messages/', views.fetch_messages, name='fetch_messages'),
     path('like_post/', like_post, name='like_post'),
-    path('upload-profile-picture/', upload_profile_picture, name='upload_profile_picture'),
+    path('upload_profile_picture/', upload_profile_picture, name='upload_profile_picture'),
     path('add_comment/', views.add_comment, name='add_comment'),
     path('fetch-group-messages/', fetch_group_messages, name='fetch_group_messages'),
     path('send-group-message/', send_group_message, name='send_group_message'),
@@ -76,6 +78,7 @@ urlpatterns = [
     path('remove-member/<str:group_id>/', remove_member, name='remove_member'),
     path('remove_friend/', views.remove_friend, name='remove_friend'),
     path('delete_post/', views.delete_post, name='delete_post'),
+    path('delete_account/', delete_account, name='delete_account'),
 ]
 websocket_urlpatterns = [
     path('ws/chat/<str:friend_username>/', ChatConsumer.as_asgi()),

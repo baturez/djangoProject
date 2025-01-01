@@ -11,25 +11,59 @@
 <div>
     <h1>Konular</h1>
 
-    <div>
-        <h3>Yeni Konu Oluştur</h3>
-        <form id="createTopicForm">
-            <div>
+<div style="margin-top: 20px;">
+    <button id="toggleForm" class="toggle-button">Yeni Konu Oluştur</button>
+    <div id="formContainer" class="hidden">
+        <form id="createTopicForm" class="topic-form">
+            <div class="form-group">
                 <label for="title">Konu Başlığı:</label>
-                <input type="text" id="title" name="title" required>
+                <input type="text" id="title" name="title" class="form-input" required>
             </div>
-            <div>
+            <div class="form-group">
                 <label for="description">Açıklama:</label>
-                <textarea id="description" name="description" rows="4" required></textarea>
+                <textarea id="description" name="description" rows="4" class="form-input" required></textarea>
             </div>
-            <button type="submit">Oluştur</button>
+            <button type="submit" class="submit-button">Oluştur</button>
         </form>
     </div>
+</div>
 
-    <div id="topicsContainer">
-        <h3>Konular</h3>
-        <ul id="topicsList"></ul>
-    </div>
+ <div id="topicsContainer">
+    <h3>Konular</h3>
+    <ul id="topicsList">
+        {% for topic in topics %}
+            <li id="topic_{{ topic|get_id }}">
+                <!-- Konu Başlığını Tıklanabilir Yapıyoruz -->
+                <h4 onclick="toggleTopicContent('{{ topic|get_id }}')" style="cursor: pointer;">
+                    {{ topic.title }}
+                </h4>
+
+                <!-- Konunun Gizli İçeriği -->
+                <div id="topic_content_{{ topic|get_id }}" class="hidden">
+                    <p>{{ topic.description }}</p>
+                    <p>
+                        Beğeni: <span id="topic_likes_{{ topic|get_id }}">{{ topic.likes_count }}</span>
+                        Beğenmeme: <span id="topic_dislikes_{{ topic|get_id }}">{{ topic.dislikes_count }}</span>
+                    </p>
+                    <button onclick="likeTopic('{{ topic|get_id }}')">Beğen</button>
+                    <button onclick="dislikeTopic('{{ topic|get_id }}')">Beğenme</button>
+
+                    <h5>Yorumlar:</h5>
+                    <button onclick="toggleComments('{{ topic|get_id }}')">Yorumları Göster/Gizle</button>
+                    <div class ="hidden">
+                    <ul id="comments_{{ topic|get_id }}" ></ul>
+                    
+                    <form id="commentForm_{{ topic|get_id }}" onsubmit="addComment(event, '{{ topic|get_id }}')">
+                        <input type="text" id="comment_text_{{ topic|get_id }}" placeholder="Yorum yazın...">
+                        <button type="submit">Yorum Yap</button>
+                    </form>
+                    </div>
+                </div>
+            </li>
+        {% endfor %}
+    </ul>
+</div>
+
 </div>
 
 <script>
@@ -59,42 +93,43 @@
         .catch(error => console.error('Error:', error));
     });
 
-    function loadTopics() {
-    fetch('/api/get_topics/')
-        .then(response => response.json())
-        .then(data => {
-            if (data.error) {
-                alert(data.error);
-                return;
-            }
+ function loadTopics() {
+        fetch('/api/get_topics/')
+            .then(response => response.json())
+            .then(data => {
+                const topicsList = document.getElementById('topicsList');
+                topicsList.innerHTML = '';
 
-            const topicsList = document.getElementById('topicsList');
-            topicsList.innerHTML = '';
-
-            data.topics.forEach(topic => {
-                const listItem = document.createElement('li');
-                listItem.innerHTML = `
-                    <h4>${topic.title}</h4>
-                    <p>${topic.description}</p>
-                    <p>
-                        Beğeni: <span id="topic_likes_${topic._id}">${topic.likes_count}</span>
-                        Beğenmeme: <span id="topic_dislikes_${topic._id}">${topic.dislikes_count}</span>
-                    </p>
-                    <button onclick="likeTopic('${topic._id}')">Beğen</button>
-                    <button onclick="dislikeTopic('${topic._id}')">Beğenme</button>
-                    <h5>Yorumlar:</h5>
-                    <ul id="comments_${topic._id}"></ul>
-                    <form id="commentForm_${topic._id}" onsubmit="addComment(event, '${topic._id}')">
-                        <input type="text" id="comment_text_${topic._id}" placeholder="Yorum yazın...">
-                        <button type="submit">Yorum Yap</button>
-                    </form>
-                `;
-                topicsList.appendChild(listItem);
-
-                loadComments(topic._id);
-            });
-        })
-        .catch(error => console.error('Error:', error));
+                data.topics.forEach(topic => {
+                    const listItem = document.createElement('li');
+                    listItem.id = `topic_${topic._id}`;
+                    listItem.innerHTML = `
+                        <h4 onclick="toggleTopicContent('${topic._id}')">${topic.title}</h4>
+                        <p>${topic.description}</p>
+                        <p>
+                            Beğeni: <span id="topic_likes_${topic._id}">${topic.likes_count}</span>
+                            Beğenmeme: <span id="topic_dislikes_${topic._id}">${topic.dislikes_count}</span>
+                        </p>
+                        <button onclick="likeTopic('${topic._id}')">Beğen</button>
+                        <button onclick="dislikeTopic('${topic._id}')">Beğenme</button>
+                        <h5>Yorumlar:</h5>
+                        <button onclick="toggleComments('${topic._id}')">Yorumları Göster/Gizle</button>
+                        
+                        <ul id="comments_${topic._id}" class="hidden"></ul>
+                        <form id="commentForm_${topic._id}" onsubmit="addComment(event, '${topic._id}')">
+                            <input type="text" id="comment_text_${topic._id}" placeholder="Yorum yazın...">
+                            <button type="submit">Yorum Yap</button>
+                        </form>
+                    `;
+                    topicsList.appendChild(listItem);
+                    loadComments(topic._id);
+                });
+            })
+            .catch(error => console.error('Error loading topics:', error));
+    }
+function setTopicHash(topicId) {
+    // Update the URL hash to reflect the clicked topic
+    window.location.hash = `#topic_${topicId}`;
 }
 
 function addComment(event, topicId) {
@@ -177,24 +212,66 @@ function dislikeTopic(topicId) {
 }
 
 function loadComments(topicId) {
-    fetch(`/api/get_comments_for_topic/${topicId}/`)
-        .then(response => response.json())
-        .then(data => {
-            const commentsList = document.getElementById(`comments_${topicId}`);
-            commentsList.innerHTML = '';
+        fetch(`/api/get_comments_for_topic/${topicId}/`)
+            .then(response => response.json())
+            .then(data => {
+                const commentsList = document.getElementById(`comments_${topicId}`);
+                commentsList.innerHTML = '';
+                data.comments.forEach(comment => {
+                    const commentItem = document.createElement('li');
+                    commentItem.textContent = comment.comment_text;
+                    commentsList.appendChild(commentItem);
+                });
+            })
+            .catch(error => console.error('Error loading comments:', error));
+    }
 
-            data.comments.forEach(comment => {
-                const commentItem = document.createElement('li');
-                commentItem.textContent = comment.comment_text;
-                commentsList.appendChild(commentItem);
-            });
-        })
-        .catch(error => console.error('Error:', error));
-}
+   window.onload = function() {
+    const topicHash = window.location.hash;
 
-    window.onload = function() {
-        loadTopics();
-    };
+    // Scroll to the topic if a hash exists
+    if (topicHash) {
+        const topicElement = document.querySelector(topicHash);
+        if (topicElement) {
+            topicElement.scrollIntoView({ behavior: 'smooth' });
+        }
+    }
+
+    loadTopics();  // Make sure the topics are loaded after the page loads
+
+    // Listen for hash changes in case the user clicks on a topic link
+    window.addEventListener('hashchange', function() {
+        const topicHash = window.location.hash;
+        const topicElement = document.querySelector(topicHash);
+        if (topicElement) {
+            topicElement.scrollIntoView({ behavior: 'smooth' });
+        }
+    });
+};
+ document.getElementById('toggleForm').addEventListener('click', function () {
+      const formContainer = document.getElementById('formContainer');
+      if (formContainer.classList.contains('hidden')) {
+          formContainer.classList.remove('hidden');
+      } else {
+          formContainer.classList.add('hidden');
+      }
+  });
+ function toggleTopicContent(topicId) {
+        const topicContent = document.getElementById(`topic_content_${topicId}`);
+        if (topicContent.classList.contains('hidden')) {
+            topicContent.classList.remove('hidden'); // İçeriği göster
+        } else {
+            topicContent.classList.add('hidden'); // İçeriği gizle
+        }
+    }
+       function toggleComments(topicId) {
+        const comments = document.getElementById(`comments_${topicId}`);
+        if (comments.classList.contains('hidden')) {
+            comments.classList.remove('hidden'); // Yorumları göster
+        } else {
+            comments.classList.add('hidden'); // Yorumları gizle
+        }
+    }
 </script>
     <script src="{% static 'js/bootstrap.min.js' %}"></script>
 {% endblock %}

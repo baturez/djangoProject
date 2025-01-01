@@ -30,7 +30,9 @@
                 <button type="button" style="margin-right: 125px;" onclick="window.location.href='{% url 'profile' %}';" class="button-33">
                     <div class="profile-container">
                         <div class="profile-text">Profilim</div>
-                        <div class="profile-img"></div>
+                        <div class="profile-img-l">
+    <img src="/media/{{ profile_picture }}">
+</div>
                     </div>
                 </button>
             </nav>
@@ -40,6 +42,25 @@
             <div class="menu-item"><button type="button" class="btn btn-secondary">Grup Odaları</button></div>
             <div class="menu-item"><button type="button" class="btn btn-secondary">Gündem Konular</button></div>
             <div class="menu-item"><button type="button" class="btn btn-secondary">Ayarlar</button></div>
+
+           <button class="button-33" role="button" onclick="">Populer Postlar</button>
+            <ul style="list-style-type: none; padding-left: 15px;">
+                {% if popular_posts %}
+                    {% for post in popular_posts %}
+                        <li>
+                            <div class="post-content" style="margin-top: 15px">
+                                <!-- Pass the post's ID as a URL parameter -->
+                                <button class="button-60" role="button"
+                                    onclick="window.location.href='{% url 'post_view' post_id=post|get_id %}'">
+                                    {{ post.content }}
+                                </button>
+                            </div>
+                        </li>
+                    {% endfor %}
+                {% else %}
+                    <li>No popular posts available.</li>
+                {% endif %}
+            </ul>
         </div>
 
         <!-- Middle Section - Content Area -->
@@ -61,12 +82,19 @@
                         <li><p>Henüz grup eklenmedi.</p></li>
                     {% endif %}
                 </ul>
-                <button class="button-33" role="button" onclick="window.location.href='{% url 'topics' %}';">Gündem Konular</button>
-                <ul style="padding-top: 15px; list-style-type: none; padding-left: 15px;">
-                    <li><button class="button-60" role="button">Konu x</button></li>
-                    <li><button class="button-60" role="button">Konu y</button></li>
-                    <li><button class="button-60" role="button">Konu z</button></li>
-                </ul>
+                 <button class="button-33" role="button" onclick="window.location.href='{% url 'topics' %}';">Gündem Konular</button>
+                    <ul style="padding-top: 15px; list-style-type: none; padding-left: 15px;">
+                        {% for topic in topics %}
+                                <li>
+                                    <button class="button-60" role="button"
+                                        onclick="window.location.href='{% url 'topics' %}#topic_{{ topic|get_id }}'">
+                                        {{ topic.title }}
+                                    </button>
+                                </li>
+                        {% endfor %}
+                    </ul>
+
+
             {% endblock %}
 
           <!-- Chat Bar -->
@@ -133,7 +161,7 @@
 {% block extra_js %}
 <script>
     document.getElementById('chat-bar').style.display = 'none'; 
-    
+
 </script>
 {% endblock %}
 

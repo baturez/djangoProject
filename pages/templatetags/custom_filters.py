@@ -27,3 +27,7 @@ def round_to(value, decimals=2):
         return round(float(value), decimals)
     except (ValueError, TypeError):
         return value
+@register.filter
+def get_id(value):
+    """Returns the ID of the object."""
+    return str(value.get('_id')) if value and '_id' in value else None

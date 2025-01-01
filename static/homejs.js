@@ -120,68 +120,77 @@ function selectFriend(friendUsername) {
     document.getElementById("chat-section").style.display = "block";
 
     const chatMessages = document.getElementById("chat-messages");
-    chatMessages.innerHTML = "";  // Eski mesajları temizle
+    chatMessages.innerHTML = "";  // Clear old messages
 
-    if (chatSocket) chatSocket.close();  // Önceki WebSocket bağlantısını kapat
+    if (chatSocket) chatSocket.close();  // Close previous WebSocket connection
 
-    const yourUsername = document.getElementById("username").dataset.username;
+    const yourUsername = getUsernameFromSession();  // Fetch the updated username
     const groupName = `chat_${[yourUsername, selectedFriend].sort().join('_')}`;
 
-    // WebSocket bağlantısı kur
+    // Establish WebSocket connection
     chatSocket = new WebSocket(`wss://${window.location.host}/ws/chat/${groupName}/`);
 
-    // Mesaj alma işlevi
-       chatSocket.onmessage = function (event) {
+    chatSocket.onmessage = function (event) {
         const data = JSON.parse(event.data);
         displayMessage(data);
     };
 
     chatSocket.onclose = function () {
-    console.error("WebSocket bağlantısı kapandı.");
-};
+        console.error("WebSocket connection closed.");
+    };
 
     fetchMessages(friendUsername, chatMessages);
 }
 
 function displayMessage(data) {
     const chatMessages = document.getElementById("chat-messages");
-
-    // Yeni mesaj elementini oluştur
     const messageElement = document.createElement("div");
     messageElement.className = "message";
 
-    // Gönderenin ismini mavi yapalım (Eğer mesajı biz göndermişsek)
     const senderElement = document.createElement("strong");
-
-    const yourUsername = document.getElementById("username").dataset.username; // Kullanıcının ismini al
+    const yourUsername = getUsernameFromSession();  // Fetch the updated username
 
     if (data.sender === yourUsername) {
-        // Eğer bu mesaj senin gönderdiğin bir mesaj ise
         senderElement.textContent = `You: `;
-        senderElement.classList.add("sender"); // Kendi ismini mavi yapmak için
+        senderElement.classList.add("sender");
     } else {
-        // Eğer mesaj karşı taraftan geldiyse
         senderElement.textContent = `${data.sender}: `;
-        senderElement.classList.add("receiver"); // Karşıdaki göndereni yeşil yapmak için
+        senderElement.classList.add("receiver");
     }
 
     messageElement.appendChild(senderElement);
-
-    // Mesajın metnini ekleyelim
     const messageText = document.createElement("span");
     messageText.textContent = data.message || '';
     messageElement.appendChild(messageText);
 
-    // Eğer mesajda dosya varsa, dosya ekle
     if (data.file_name && data.file_data) {
         addFileToMessage(messageElement, data);
     }
 
-    // Yeni mesajı ekle
     chatMessages.appendChild(messageElement);
-    chatMessages.scrollTop = chatMessages.scrollHeight;  // Otomatik kaydır
+    chatMessages.scrollTop = chatMessages.scrollHeight;
 }
-
+function getUsernameFromSession() {
+    return document.getElementById("username").dataset.username;
+}
+function reconnectWebSocket() {
+    const newUsername = getUsernameFromSession();  // Get the updated username
+    // Reconnect WebSocket with new username (assuming 'selectedFriend' is set)
+    if (selectedFriend) {
+        const groupName = `chat_${[newUsername, selectedFriend].sort().join('_')}`;
+        chatSocket = new WebSocket(`wss://${window.location.host}/ws/chat/${groupName}/`);
+        chatSocket.onmessage = function (event) {
+            const data = JSON.parse(event.data);
+            displayMessage(data);
+        };
+    }
+}
+window.addEventListener('load', function () {
+    const newUsername = getUsernameFromSession();  // Get the updated username after page reload
+    if (newUsername) {
+        reconnectWebSocket();  // Reconnect the WebSocket with the new username
+    }
+});
 // WebSocket mesajı geldiğinde
 chatSocket.onmessage = function (event) {
     const data = JSON.parse(event.data);
@@ -395,6 +404,3 @@ function toggleChat() {
     const isVisible = chatBar.style.display === 'block';
     chatBar.style.display = isVisible ? 'none' : 'block';
 }
-
-
-

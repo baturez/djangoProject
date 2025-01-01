@@ -12,16 +12,60 @@
     <div class="row">
 <div class="col-12 col-md-6 content">
     <div id="login-container">
-    <div class="profile-img">
-        <img src="{{ user.profile_picture }}" alt="Profil Resmi" style="max-width: 100px;">
+<div class="profile-img">
+    <img src="/media/{{ pp.profile_picture }}" alt="Profil Resmi" id="profile-picture">
+</div>
+        <div id="profilePicModal" class="modalp">
+    <div class="modal-content">
+        <span class="closep" onclick="closepModal()">&times;</span>
+        <h2>Yeni Profil Resmi Yükle</h2>
+        <form action="/upload_profile_picture/" method="POST" enctype="multipart/form-data">
+            {% csrf_token %}
+            <label for="profile_picture">Yeni Profil Resmi Yükle:</label>
+            <input type="file" name="profile_picture" accept="image/*" required>
+            <button type="submit">Profil Resmini Güncelle</button>
+        </form>
     </div>
+</div>
     <h1>{{ username }}</h1>
     <div class="description">
         <h2>E-Posta: {{ email }}</h2>
     </div>
     <button onclick="window.location.href='/home'">Ana Sayfa</button>
-        <button onclick="window.location.href='/home'">İsim Değiştir</button>
-        <button onclick="window.location.href='/home'">Hesabı Sil</button>
+       <button onclick="openModal()">İsim Değiştir</button>
+        <div id="myModal" class="modal">
+    <div class="modal-content">
+        <span class="close" onclick="closeModal()">&times;</span>
+        <h2>İsim Değiştir</h2>
+        <form method="POST" class="username-form">
+            {% csrf_token %}
+            <input type="text" name="new_username" value="{{ username }}" placeholder="Yeni İsim" required>
+            <button type="submit" class="submit-btn">Değiştir</button>
+        </form>
+    </div>
+</div>
+        <button style=" height: 50px;
+  width: 90px;
+  font-size: 13px;
+  font-family: Comic Sans MS, Comic Sans, cursive;
+  color: #ffffff;
+  border: none;
+  margin-top: 52px;
+  box-shadow: 5px 5px 10px rgba(51, 51, 51, 0.2);
+  border-radius: 60px;
+  background: linear-gradient(45deg, #f4b9b9, #e24c68,#4c0000 ,#7a4b4b );
+  background-size: 300% 300%;
+  outline: none;
+  transition: all 200ms ease-in-out;"  class="delete-account-btn" onclick="openDeleteModal()">Hesabı Sil</button>
+        <div id="deleteModal" class="modal">
+    <div class="modal-content">
+        <span class="close" onclick="closeDeleteModal()">&times;</span>
+        <h2>Hesabınızı Silmek Üzeresiniz!</h2>
+        <p>Hesabınızı sildiğinizde tüm verileriniz kalıcı olarak silinecektir. Devam etmek istediğinizden emin misiniz?</p>
+        <button onclick="deleteAccount()" class="confirm-btn">Evet, Hesabımı Sil</button>
+        <button onclick="closeDeleteModal()" class="cancel-btn">Hayır, İptal Et</button>
+    </div>
+</div>
 
     <form id="profilePictureForm" enctype="multipart/form-data" method="POST" action="{% url 'upload_profile_picture' %}">
         {% csrf_token %}
@@ -65,6 +109,8 @@
         {% endfor %}
     </ul>
 </div>
+
+
 </div>
 
 <div class="col-12 col-md-6 content">
@@ -85,15 +131,19 @@
                     <span class="result-username">{{ user.username }}</span>
                     <form action="{% url 'send_friend_request' user.username %}" method="post" style="display:inline;">
                         {% csrf_token %}
-                        {% if user.username in friens %}
-                            <button type="button" class="status-button" disabled>Arkadaşsınız</button>
-                        {% elif reqq.status == 'pending' %}
+                        {% if user.friend_request_status %}
+                        {% if user.friend_request_status.status == 'pending' %}
                             <button type="button" class="status-button" disabled>İstek Gönderildi</button>
-                        {% elif user.username == username %}
+                    {% elif user.username == username %}
 
                         {% else %}
-                            <button type="submit" class="send-request-button">Arkadaşlık İsteği Gönder</button>
+                            <button type="button" class="status-button" disabled>Arkadaşsınız</button>
                         {% endif %}
+
+                        <!-- Kendine arkadaşlık isteği gönderemez -->
+                    {% else %}
+                        <button type="submit" class="send-request-button">Arkadaşlık İsteği Gönder</button>
+                    {% endif %}
                     </form>
                 </li>
             {% endfor %}
@@ -112,7 +162,7 @@
         <div class="post">
         <div class="post-content">
             <div class="post-header">
-                <img src="https://picsum.photos/200" class="pp-img">
+                <img src="/media/{{ pp.profile_picture }}" class="pp-img">
                 <h4>{{ post.username }}</h4> <small style="font-size: 10px">{{ post.created_at }}</small>
             </div>
 
@@ -226,7 +276,37 @@ document.addEventListener('DOMContentLoaded', () => {
             });
         });
     });
+ document.addEventListener('DOMContentLoaded', function () {
+        const likeButtons = document.querySelectorAll('.like-btn');
 
+        likeButtons.forEach(button => {
+            button.addEventListener('click', function () {
+                const postId = button.getAttribute('data-post-id');
+
+                fetch('/like_post/', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/x-www-form-urlencoded',
+                        'X-CSRFToken': '{{ csrf_token }}' // Django CSRF token
+                    },
+                    body: new URLSearchParams({
+                        'post_id': postId
+                    })
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        // Update like count
+                        const likeCount = button.querySelector('span');
+                        likeCount.textContent = data.likes;
+                    } else {
+                        alert(data.error_message || 'An error occurred.');
+                    }
+                })
+                .catch(error => console.error('Error:', error));
+            });
+        });
+    });
 function showNotification(message) {
     const notification = document.getElementById('notification');
     notification.innerText = message;
@@ -348,6 +428,72 @@ document.addEventListener('DOMContentLoaded', function () {
             }
         }
         return cookieValue;
+    }
+    function openModal() {
+    document.getElementById("myModal").style.display = "block";
+}
+
+// Function to close the modal
+function closeModal() {
+    document.getElementById("myModal").style.display = "none";
+}
+
+// Close the modal if the user clicks outside the modal
+window.onclick = function(event) {
+    if (event.target == document.getElementById("myModal")) {
+        closeModal();
+    }
+}
+function openDeleteModal() {
+    document.getElementById('deleteModal').style.display = 'block';
+}
+
+function closeDeleteModal() {
+    document.getElementById('deleteModal').style.display = 'none';
+}
+
+function deleteAccount() {
+    // Send a POST request to the server to delete the account and related data
+    fetch('/delete_account/', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+        },
+        body: JSON.stringify({ delete: true })
+    })
+    .then(response => {
+        if (response.ok) {
+            window.location.href = '/'; // Redirect to homepage or login page after deletion
+        } else {
+            alert("Bir hata oluştu. Lütfen tekrar deneyin.");
+        }
+    })
+    .catch(error => {
+        console.error("Error deleting account:", error);
+        alert("Bir hata oluştu. Lütfen tekrar deneyin.");
+    });
+}
+var modal = document.getElementById("profilePicModal");
+
+    // Get the profile picture
+    var profilePic = document.getElementById("profile-picture");
+
+    // When the user clicks on the profile picture, open the modal
+    profilePic.onclick = function() {
+        modal.style.display = "block";
+    }
+
+    // Function to close the modal
+    function closepModal() {
+        modal.style.display = "none";
+    }
+
+    // When the user clicks anywhere outside of the modal, close it
+    window.onclick = function(event) {
+        if (event.target == modal) {
+            modal.style.display = "none";
+        }
     }
 </script>
 

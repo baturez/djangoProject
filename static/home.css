@@ -426,18 +426,23 @@ nav a:hover {
 
 
 
-.profile-img {
+.profile-img-l {
   height: 40px;
   width: 40px;
-    margin-top: -8px;
-  background: url("profileps/3.png");
-  background-size: cover;
-  background-position: center;
+  margin-top: -8px;
   position: absolute;
-  right: -63px; /* resim metinden 50px sağda olacak */
-  top: 0; /* metinle hizalanması için */
-  border-radius: 50%;
-  box-shadow: 5px 5px 10px rgb(51, 51, 51);
+  right: -63px; /* Resim metinden 50px sağda olacak */
+  top: 0; /* Metinle hizalanması için */
+  border-radius: 50%; /* Kapsayıcıyı dairesel yap */
+  box-shadow: 5px 5px 10px rgb(51, 51, 51); /* Gölge */
+  overflow: hidden; /* Resim kapsayıcıdan taşarsa gizle */
+}
+
+.profile-img-l img {
+  width: 100%; /* Resmi kapsayıcı genişliğine ayarla */
+  height: 100%; /* Resmi kapsayıcı yüksekliğine ayarla */
+  object-fit: cover; /* Resmi düzgün bir şekilde ortala ve kırp */
+  border-radius: 50%; /* Resmi dairesel yap */
 }
 .pp-img {
   height: 40px;

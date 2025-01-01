@@ -69,7 +69,8 @@
         {% for post in posts %}
         <div class="post">
             <div class="post-header">
-                <img src="https://picsum.photos/200" class="pp-img">
+                <img src="/media/{{ post.profile_picture }}" class="pp-img">
+                
                 <h4>{{ post.username }}</h4>
             </div>
             <p>{{ post.content }}</p>
