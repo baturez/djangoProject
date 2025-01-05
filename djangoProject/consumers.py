@@ -18,7 +18,7 @@ client = MongoClient(MONGO_URI)
 db = client[DATABASE_NAME]
 messages_collection = db['messages']
 group_messages_collection = db['group_messages']
-
+notifications_collection = db['notifications']
 
 # WebSocket consumer
 class ChatConsumer(AsyncWebsocketConsumer):
@@ -74,9 +74,13 @@ class ChatConsumer(AsyncWebsocketConsumer):
                 'sender': sender,
                 'recipient': recipient,
                 'text': message_content,
-                'timestamp': timezone.now()
+                'timestamp': timezone.now(),
+                'read': False  # Yeni alan: Okunma durumu
             }
             messages_collection.insert_one(message_data)  # Save message to MongoDB
+
+            # Create notification for the recipient
+            await self.create_notification(recipient, sender, message_content)
 
             # Send message to WebSocket
             await self.channel_layer.group_send(
@@ -85,7 +89,8 @@ class ChatConsumer(AsyncWebsocketConsumer):
                     'type': 'chat_message',
                     'message': message_content,
                     'sender': sender,
-                    'recipient': recipient
+                    'recipient': recipient,
+                    'notification': 'new_message'  # Bildirim için ek bilgi
                 }
             )
 
@@ -102,6 +107,19 @@ class ChatConsumer(AsyncWebsocketConsumer):
                 'message': f'File {file_name} has been deleted after download.'
             }))
 
+        # Handle marking message as read
+        elif json_data.get('type') == 'mark_as_read':
+            message_id = json_data.get('message_id')
+
+            # Mark message as read in the database
+            await self.mark_message_as_read(message_id)
+
+            # Send message back to WebSocket to notify the client
+            await self.send(text_data=json.dumps({
+                'status': 'success',
+                'message': 'Message marked as read.'
+            }))
+
     async def chat_message(self, event):
         message = event['message']
         sender = event.get('sender', None)
@@ -111,7 +129,10 @@ class ChatConsumer(AsyncWebsocketConsumer):
         file_type = event.get('file_type', None)
         file_data = event.get('file_data', None)
 
-        # Send message over WebSocket
+        # Bildirim mesajını da gönderebiliriz
+        notification_message = f"{sender} sent you a new message!"
+
+        # WebSocket üzerinden mesajı ve bildirimi gönderme
         await self.send(text_data=json.dumps({
             'message': message,
             'sender': sender,
@@ -119,8 +140,34 @@ class ChatConsumer(AsyncWebsocketConsumer):
             'file_name': file_name,
             'file_size': file_size,
             'file_type': file_type,
-            'file_data': file_data
+            'file_data': file_data,
+            'notification': notification_message  # Bildirim mesajı
         }))
+
+    @sync_to_async
+    def create_notification(self, receiver, sender, message):
+        # Check if the message is unread before creating a notification
+        unread_message = messages_collection.find_one({
+            'recipient': receiver,
+            'read': False
+        })
+
+        if unread_message:
+            notifications_collection.insert_one({
+                "receiver": receiver,
+                "sender": sender,
+                "message": f"New message from {sender}: {message}",
+                "timestamp": datetime.now(),
+                "read": False
+            })
+
+    @sync_to_async
+    def mark_message_as_read(self, message_id):
+        # Update the message as read in the MongoDB collection
+        messages_collection.update_one(
+            {'_id': message_id},
+            {'$set': {'read': True}}  # Mark the message as read
+        )
 
     # Delete file from MongoDB
     @database_sync_to_async
@@ -140,22 +187,20 @@ class ChatConsumer(AsyncWebsocketConsumer):
 
 
 # MongoDB'ye dosya kaydetme işlemi
-async def save_file_to_mongo(sender, recipient, file_name, file_size, file_type, file_data):
-    # Base64 verisini çözerek dosya verisini alıyoruz
-    file_data_bytes = base64.b64decode(file_data)
-
-    # Dosya verisini MongoDB'ye kaydediyoruz
-    document = {
+@sync_to_async
+def save_file_to_mongo(sender, recipient, file_name, file_size, file_type, file_data):
+    file_entry = {
         "sender": sender,
         "recipient": recipient,
         "file_name": file_name,
         "file_size": file_size,
         "file_type": file_type,
-        "file_data": file_data_bytes  # Dosya içeriği
+        "file_data": file_data,
+        "timestamp": datetime.now(),
+        "read": False
     }
-
-    # Veriyi senkron olarak MongoDB'ye kaydediyoruz
-    messages_collection.insert_one(document)
+    messages_collection.insert_one(file_entry)
+    return file_entry
 class GroupChatConsumer(AsyncWebsocketConsumer):
     async def connect(self):
         self.group_name = self.scope['url_route']['kwargs']['group_id']

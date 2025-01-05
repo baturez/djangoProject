@@ -1,40 +1,23 @@
-"""
-URL configuration for djangoProject project.
-
-The `urlpatterns` list routes URLs to views. For more information please see:
-    https://docs.djangoproject.com/en/5.1/topics/http/urls/
-Examples:
-Function views
-    1. Add an import:  from my_app import views
-    2. Add a URL to urlpatterns:  path('', views.home, name='home')
-Class-based views
-    1. Add an import:  from other_app.views import Home
-    2. Add a URL to urlpatterns:  path('', Home.as_view(), name='home')
-Including another URLconf
-    1. Import the include() function: from django.urls import include, path
-    2. Add a URL to urlpatterns:  path('blog/', include('blog.urls'))
-"""
-from django.urls import path, include
+from django.urls import path
 from . import views
-from . import consumers
 from djangoProject.consumers import ChatConsumer, GroupChatConsumer
 from .views import logout, group_detail, request_membership, manage_requests, approve_request, reject_request, \
-    get_membership_requests, groups, send_friend_request, accept_friend_request, \
-    reject_friend_request, view_friends, search_friends, profile_view, fetch_group_messages, send_group_message, \
+    get_membership_requests,send_friend_request, accept_friend_request, \
+    reject_friend_request, search_friends, profile_view, fetch_group_messages, send_group_message, \
     leave_group, remove_member, create_event, get_events, post_view, delete_account
 from .views import add_group
 from django.conf import settings
 from django.conf.urls.static import static
 from .views import like_post
 from .views import upload_profile_picture
-
 urlpatterns = [
     path('', views.index, name='index'),
     path('login/', views.login, name='login'),
+    path('verify/<str:token>/', views.verify_email, name='verify_email'),
     path('signup/', views.signup, name='signup'),
     path('register/', views.register, name='register'),
     path('home/', views.home, name='home'),
-    path('topics/', views.topic , name='topics'),
+    path('topics/', views.topic, name='topics'),
     path('api/create_topic/', views.create_topic, name='create_topic'),
     path('api/get_topics/', views.get_topics, name='get_topics'),
     path('api/add_comment_topic/', views.add_comment_topic, name='add_comment_topic'),
@@ -48,7 +31,6 @@ urlpatterns = [
     path('post/<str:post_id>/', views.post_view, name='post_view'),
     path('profile/', views.profile_view, name='profile'),
     path('profile/<str:username>/', profile_view, name='profile_view'),
-    path('groups/', groups, name='groups'),
     path('add_group/', add_group, name='add_group'),
     path('group/<str:group_id>/', group_detail, name='group_detail'),
     path('group/<str:group_id>/request_membership/', request_membership, name='request_membership'),
@@ -61,7 +43,6 @@ urlpatterns = [
     path('send_friend_request/<str:username>/', send_friend_request, name='send_friend_request'),
     path('friend_request/<str:request_id>/accept/', accept_friend_request, name='accept_friend_request'),
     path('friend_request/<str:request_id>/reject/', reject_friend_request, name='reject_friend_request'),
-    path('friends/', view_friends, name='view_friends'),
     path('search_friends/', search_friends, name='search_friends'),
     path('send_friend_request/<str:username>/', send_friend_request, name='send_friend_request'),
     path('send_message/', views.send_message, name='send_message'),
@@ -71,6 +52,9 @@ urlpatterns = [
     path('fetch_messages/', views.fetch_messages, name='fetch_messages'),
     path('like_post/', like_post, name='like_post'),
     path('upload_profile_picture/', upload_profile_picture, name='upload_profile_picture'),
+    path('check-new-messages/', views.check_new_messages, name='check_new_messages'),
+    path('mark_messages_as_read/<str:sender>/<str:recipient>/', views.mark_messages_as_read_view,
+         name='mark_messages_as_read'),
     path('add_comment/', views.add_comment, name='add_comment'),
     path('fetch-group-messages/', fetch_group_messages, name='fetch_group_messages'),
     path('send-group-message/', send_group_message, name='send_group_message'),
@@ -79,6 +63,8 @@ urlpatterns = [
     path('remove_friend/', views.remove_friend, name='remove_friend'),
     path('delete_post/', views.delete_post, name='delete_post'),
     path('delete_account/', delete_account, name='delete_account'),
+    path('get_membership_requests/<str:group_id>/', views.get_membership_requests, name='get_membership_requests')
+
 ]
 websocket_urlpatterns = [
     path('ws/chat/<str:friend_username>/', ChatConsumer.as_asgi()),

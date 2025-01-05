@@ -28,13 +28,19 @@ MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
 
 # SECURITY WARNING: keep the secret key used in production secret!
 SECRET_KEY = 'django-insecure--&r(^6q3q$a$=*8^9sog=!q2n8adb%8qzo1d_afr=_9u#at(ui'
-
+DEFAULT_FROM_EMAIL = 'no-reply@bartini.com'
+EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
+EMAIL_HOST = 'smtp.gmail.com'
+EMAIL_PORT = 587
+EMAIL_USE_TLS = True
+EMAIL_HOST_USER = 'bartini.online@gmail.com'
+EMAIL_HOST_PASSWORD = 'vduo dbec yvmz dlqs'
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 ALLOWED_HOSTS = ['bartini.online', '.render.com','bartini-1.onrender.com','localhost','127.0.0.1']
 CSRF_TRUSTED_ORIGINS = ['https://bartini.online', 'https://*.render.com','https://bartini-1.onrender.com']
 SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
-
+SITE_ID = 1
 # Application definition
 CORS_ALLOW_ALL_ORIGINS = True
 INSTALLED_APPS = [
@@ -47,6 +53,7 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
     'pages.apps.PagesConfig',
+    'django.contrib.sites',
     'channels',
     'corsheaders',
 ]

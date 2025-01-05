@@ -112,6 +112,7 @@ function nextStory(event) {
 
 let chatSocket = null;
 let selectedFriend = null;
+let notificationButton = document.querySelector('.toggle-chat-btn');
 
 // Arkadaş seçimi işlevi
 function selectFriend(friendUsername) {
@@ -120,14 +121,16 @@ function selectFriend(friendUsername) {
     document.getElementById("chat-section").style.display = "block";
 
     const chatMessages = document.getElementById("chat-messages");
-    chatMessages.innerHTML = "";  // Clear old messages
+    chatMessages.innerHTML = "";  // Clear previous messages
 
     if (chatSocket) chatSocket.close();  // Close previous WebSocket connection
 
-    const yourUsername = getUsernameFromSession();  // Fetch the updated username
+    const yourUsername = getUsernameFromSession();  // Get the logged-in user's username
     const groupName = `chat_${[yourUsername, selectedFriend].sort().join('_')}`;
 
-    // Establish WebSocket connection
+    // Send request to mark all previous messages as unread in the backend (MongoDB)
+
+    // Establish a new WebSocket connection
     chatSocket = new WebSocket(`wss://${window.location.host}/ws/chat/${groupName}/`);
 
     chatSocket.onmessage = function (event) {
@@ -139,8 +142,20 @@ function selectFriend(friendUsername) {
         console.error("WebSocket connection closed.");
     };
 
-    fetchMessages(friendUsername, chatMessages);
+    fetchMessages(friendUsername, chatMessages);  // Fetch old messages
+    markMessagesAsRead(yourUsername, friendUsername);
 }
+function markMessagesAsRead(sender, recipient) {
+    // Backend'e mesajları okundu olarak işaretlemesi için bir istek gönder
+    fetch(`/mark_messages_as_read/${sender}/${recipient}/`, {
+    method: 'POST',
+    headers: {
+        'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({ sender: sender, recipient: recipient })
+});
+}
+// Send a request to the backend to mark all messages as unread
 
 function displayMessage(data) {
     const chatMessages = document.getElementById("chat-messages");
@@ -148,7 +163,7 @@ function displayMessage(data) {
     messageElement.className = "message";
 
     const senderElement = document.createElement("strong");
-    const yourUsername = getUsernameFromSession();  // Fetch the updated username
+    const yourUsername = getUsernameFromSession();  // Kullanıcı adını al
 
     if (data.sender === yourUsername) {
         senderElement.textContent = `You: `;
@@ -169,7 +184,72 @@ function displayMessage(data) {
 
     chatMessages.appendChild(messageElement);
     chatMessages.scrollTop = chatMessages.scrollHeight;
+
+    // Yeni mesaj alındığında butonu değiştirme
+    if (selectedFriend !== data.sender) {
+        notificationButton.classList.add("new-message");  // Butona stil ekle
+        notificationButton.textContent = "🔔 Yeni Mesaj";  // Butonun üzerine bildirim simgesi ekle
+    }
 }
+document.addEventListener('DOMContentLoaded', function () {
+
+
+    // Mesaj geldiğinde çalışır
+    chatSocket.onmessage = function (e) {
+        const data = JSON.parse(e.data);
+
+        if (data.type === 'message') {
+            // Yeni mesaj göstergesini görünür yap
+            const indicator = document.getElementById('new-message-indicator');
+            if (indicator) {
+                indicator.style.display = 'inline'; // Görünür yap
+            }
+        }
+    };
+
+    chatSocket.onclose = function (e) {
+        console.error('Chat socket kapandı.');
+    };
+
+    // Yeni mesaj göstergesini temizleme işlevi
+    window.clearNewMessageNotification = function () {
+        const indicator = document.getElementById('new-message-indicator');
+        if (indicator) {
+            indicator.style.display = 'none'; // Gizle
+        }
+    };
+});
+function checkNewMessages() {
+    fetch('/check-new-messages/')
+        .then(response => {
+            console.log('Response:', response);
+            if (!response.ok) {
+                return response.json().then(errorData => {
+                    throw new Error(`Server error: ${errorData.error}`);
+                });
+            }
+            return response.json();
+        })
+        .then(data => {
+            console.log('Data:', data);
+            if (data.new_message) {
+                document.getElementById("new-message-indicator").style.display = "inline-block";
+            }
+        })
+        .catch(error => console.error('Error checking new messages:', error));
+}
+
+// Her 5 saniyede bir yeni mesaj kontrolü yap
+setInterval(checkNewMessages, 10000);
+function clearNewMessageNotification() {
+    const notificationIndicator = document.getElementById('new-message-indicator');
+    notificationIndicator.style.display = 'none';
+}
+
+
+
+// Function to send the mark_as_read signal via WebSocket
+
 function getUsernameFromSession() {
     return document.getElementById("username").dataset.username;
 }
@@ -178,7 +258,7 @@ function reconnectWebSocket() {
     // Reconnect WebSocket with new username (assuming 'selectedFriend' is set)
     if (selectedFriend) {
         const groupName = `chat_${[newUsername, selectedFriend].sort().join('_')}`;
-        chatSocket = new WebSocket(`wss://${window.location.host}/ws/chat/${groupName}/`);
+        chatSocket = new WebSocket(`ws://${window.location.host}/ws/chat/${groupName}/`);
         chatSocket.onmessage = function (event) {
             const data = JSON.parse(event.data);
             displayMessage(data);
@@ -230,15 +310,10 @@ function addFileToMessage(messageElement, data) {
     messageElement.appendChild(downloadButton);
 }
 
-// Dosya indirme bildirimini sunucuya gönder
-function notifyFileDownloaded(fileName) {
-    chatSocket.send(JSON.stringify({
-        type: 'file_downloaded',
-        file_name: fileName
-    }));
-}
 
-// MongoDB'den mesajları çek
+
+
+
 function fetchMessages(friendUsername, chatMessages) {
     fetch('/fetch_messages?friend=' + friendUsername)
     .then(response => response.json())
@@ -276,7 +351,7 @@ function fetchMessages(friendUsername, chatMessages) {
 
                 // Dosya varsa, dosyayı ekle
                 if (msg.file_name && msg.file_data) {
-                    addFileToMessage(messageElement, msg);
+                    addFileToMessage(messageElement, msg);  // Dosyayı ekle
                 }
 
                 // Yeni mesajı en alta ekleyelim
@@ -296,17 +371,44 @@ function handleFileSelect(event) {
     const file = fileInput.files[0];
 
     if (file) {
-        document.getElementById("file-name").innerText = `Seçilen dosya: ${file.name} (${(file.size / 1024).toFixed(2)} KB)`;
-        document.getElementById("file-info").style.display = "block";
+        // Dosya Bilgilerini Göster
+        document.getElementById('file-name').innerText = file.name;
+        document.getElementById('file-info').style.display = 'block';
+
+        // İlerleme Çubuğu Sıfırla
+        const progressBar = document.getElementById('progress-bar');
+        progressBar.style.width = '0%';
+        document.getElementById('upload-progress').style.display = 'block';
     }
 }
 
 // Dosya seçimini temizle
 function clearFile() {
-    const fileInput = document.getElementById("file-input");
-    fileInput.value = "";  // Dosya girişini sıfırla
-    document.getElementById("file-info").style.display = "none";  // Dosya bilgisini gizle
+    // Dosya Girdisini Temizle
+    const fileInput = document.getElementById('file-input');
+    fileInput.value = '';
+    document.getElementById('file-info').style.display = 'none';
+    document.getElementById('upload-progress').style.display = 'none';
 }
+
+function simulateUploadProgress() {
+    const progressBar = document.getElementById('progress-bar');
+    let progress = 0;
+
+    // İlerleme Simülasyonu
+    const interval = setInterval(() => {
+        progress += 10;
+        progressBar.style.width = `${progress}%`;
+
+        if (progress >= 100) {
+            clearInterval(interval);
+            alert('Dosya başarıyla yüklendi!');
+        }
+    }, 300);
+}
+document.getElementById('file-input').addEventListener('change', () => {
+    simulateUploadProgress();
+});
 
 // Mesaj gönderme işlevi
 function sendMessage() {
@@ -394,13 +496,27 @@ function sendFileMessage(file, messageContent, yourUsername) {
 
 
 
-// Mesajı kullanıcı arayüzünde göster
+
 
 
 
 
 function toggleChat() {
-    const chatBar = document.getElementById('chat-bar');
-    const isVisible = chatBar.style.display === 'block';
-    chatBar.style.display = isVisible ? 'none' : 'block';
+    var chatBar = document.getElementById("chat-bar");
+    var indicator = document.getElementById("new-message-indicator");
+    var chatsection = document.getElementById("chat-section")
+    if (chatBar.style.display === "none") {
+        chatBar.style.display = "block"; // Open the chat bar
+        indicator.style.display = "none"; // Hide the notification
+        chatsection.style.display = "none";
+    } else {
+        chatBar.style.display = "none"; // Close the chat bar
+
+        // Close WebSocket connection when chat bar is closed
+        if (chatSocket) {
+            chatSocket.close();
+            chatSocket = null;  // Reset WebSocket connection
+            console.log("WebSocket connection closed.");
+        }
+    }
 }

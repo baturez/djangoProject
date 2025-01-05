@@ -5,61 +5,77 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Bartini - Kayıt Ol</title>
+    <link rel="stylesheet" href="{% static 'css/bootstrap.min.css' %}">
     <link rel="stylesheet" href="{% static 'sign.css' %}">
-    <script src="{% static 'sign.js' %}"></script>
-       <link rel="stylesheet" href="{% static 'css/bootstrap.min.css' %}">
-
 </head>
 <body>
-    <nav class="navbar bg-body-white">
-        <div style=" ;" class="container">
-          <a class="navbar-brand" href="/">
-            <img style="width: 275px" src="{% static 'images/logo.png' %}" alt="Bootstrap">
-          </a>
+    <!-- Navbar -->
+    <nav class="navbar bg-light shadow-sm">
+        <div class="container">
+            <a class="navbar-brand" href="/">
+                <img src="{% static 'images/logo.png' %}" alt="Bartini Logo" style="width: 150px;">
+            </a>
         </div>
     </nav>
 
-            <div class="col">
-                <div style="padding-top: 20%; " class="right-section center text-center">
-                    <div class="container center">
-                        {% if success_message %}
-                        <div class="success-message" id="successMessage">{{ success_message }}</div>
-<script>
-                            document.addEventListener('DOMContentLoaded', function() {
-                                var successMessage = document.getElementById('successMessage');
-                                if (successMessage) {
-                                    successMessage.style.display = 'block'; 
-                                    setTimeout(function() {
-                                        window.location.href = '/'; 
-                                    }, 1000); 
-                                }
-                            });
-                        </script>
-                        {% endif %}
-                              <form autocomplete="off" id="form"method="POST"action="{% url 'register' %}">
+    <!-- Signup Section -->
+    <div class="container d-flex justify-content-center align-items-center" style="min-height: 90vh;">
+        <div class="card shadow-lg p-4" style="max-width: 500px; width: 100%; border-radius: 12px;">
+            <h2 class="text-center mb-4" style="color: #333; font-weight: bold;">Kayıt Ol</h2>
 
-                            {% csrf_token %}
-                                      <h1 style="color: rgba(51,51,51,0.7)" id="message">Kayıt Ol</h1><small id="smallMessage"> </small>
-                                      <div class="field">
-                                   <input type="email" name="email" placeholder="E-posta" id="email" autocomplete="off"required/>
-                                    <label for="email">email</label>
-                             </div>
-                            <div class="field">
-                                   <input type="username" name="username" placeholder="Kullanıcı Adı" id="username" autocomplete="off"required/>
-                                    <label for="username">username</label>
-                             </div>
-                                  <div class="field">
-                                   <input type="password" name="password" placeholder="Şifre" id="password" autocomplete="off"required/>
-                                    <label for="password">password</label>
-                             </div>
-                                      <button  type="submit" id="submit login-button">Hesabımı Oluştur</button>
-                            <a href="/" class="forgot-password">Zaten hesabım var</a>
-                        </form>
-                    </div>
+            <!-- Success Message -->
+            {% if success_message %}
+            <div class="alert alert-success" role="alert" id="successMessage">
+                {{ success_message }}
+            </div>
+            <script>
+                document.addEventListener('DOMContentLoaded', function() {
+                    setTimeout(() => window.location.href = '/', 1500); /* 1.5 saniye sonra yönlendirme */
+                });
+            </script>
+            {% endif %}
+
+            <!-- Error Message -->
+            {% if error_message %}
+            <div class="alert alert-danger" role="alert" id="errorMessage">
+                {{ error_message }}
+            </div>
+            {% endif %}
+
+            <form method="POST" action="{% url 'register' %}" autocomplete="off">
+                {% csrf_token %}
+                <div class="mb-3">
+                    <label for="email" class="form-label">E-posta</label>
+                    <input type="email" class="form-control" id="email" name="email" placeholder="E-posta" required>
                 </div>
+
+                <div class="mb-3">
+                    <label for="username" class="form-label">Kullanıcı Adı</label>
+                    <input type="text" class="form-control" id="username" name="username" placeholder="Kullanıcı Adı" required>
+                </div>
+
+                <div class="mb-3">
+                    <label for="password" class="form-label">Şifre</label>
+                    <input type="password" class="form-control" id="password" name="password" placeholder="Şifre" required>
+                </div>
+
+                <div class="form-check mb-4">
+                    <input type="checkbox" class="form-check-input" id="termsCheckbox" required>
+                    <label class="form-check-label" for="termsCheckbox">
+                        Bartini anonimlik ilkesine uygun bir platformdur. Ancak, herhangi bir hakaret, tehdit veya yasa dışı içerik paylaşımı durumunda anonimlik ifşa edilebilir. 
+                        <a href="/privacy-policy" target="_blank">Gizlilik ve Kullanım Koşulları</a>'nı okudum ve kabul ediyorum.
+                    </label>
+                </div>
+
+                <button type="submit" class="btn btn-primary w-100 py-2">Hesabımı Oluştur</button>
+            </form>
+
+            <div class="text-center mt-3">
+                <a href="/" class="text-decoration-none" style="color: #007bff;">Zaten hesabım var</a>
             </div>
         </div>
     </div>
-    <script src="{% static 'js/bootstrap.min.js' %}"></script>
+
+    <script src="{% static 'js/bootstrap.bundle.min.js' %}"></script>
 </body>
 </html>
