@@ -374,7 +374,8 @@ def register(request):
                 {"$set": {"verification_token": token}}
             )
 
-            verification_link = f"http://bartini.online/verify/{token}"
+            verification_link = f"https://bartini.online/verify/{token}"
+
 
             subject = "E-posta Doğrulaması"
 
