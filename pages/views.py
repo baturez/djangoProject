@@ -1,4 +1,5 @@
 import base64
+from django.core.cache import cache
 from django.core.mail import EmailMessage
 from datetime import datetime,timedelta
 from channels.db import database_sync_to_async
@@ -27,7 +28,7 @@ from django.core.mail import send_mail
 import hashlib
 import uuid
 
-MONGO_URI = 'mongodb+srv://batuhanfahri06:PezQB4OKaTHSEjFm@bartini.qyrro.mongodb.net/?retryWrites=true&w=majority&appName=bartini'
+MONGO_URI = 'mongodb+srv://batuhanfahri06:PezQB4OKaTHSEjFm@bartini.qyrro.mongodb.net/<database>?retryWrites=true&w=majority&readPreference=secondaryPreferred'
 DATABASE_NAME = 'my_database'
 USER_COLLECTION = 'users'
 POST_COLLECTION = 'posts'
@@ -40,7 +41,6 @@ FRIEND_REQUEST_COLLECTION = 'friend_requests'
 client = MongoClient(MONGO_URI)
 db = client[DATABASE_NAME]
 messages_collection = db['messages']
-notifications_collection = db['notifications']
 MEMBERSHIP_REQUEST_COLLECTION = 'membership_requests'
 
 def index(request):
@@ -66,7 +66,8 @@ def post_view(request, post_id):
         context = get_common_context(username, db)
         context.update({
             'post': post,
-            'popular_posts': popular_posts
+            'popular_posts': popular_posts,
+
         })
         if 'comments' in post:
             for comment in post['comments']:
@@ -75,78 +76,108 @@ def post_view(request, post_id):
         return render(request, 'post_view.html', context)
     else:
         return render(request, 'post_view.html', {'error': 'Post not found.'})
+def chat_rooms(request):
+    client = MongoClient(MONGO_URI)
+    db = client[DATABASE_NAME]
+    username = request.session.get('username')  # Retrieve the username from the session
+    context = get_common_context(username, db)
+
+    context.update({
+        'rooms': range(1, 11),
+        'username': username  # Pass the username to the template
+    })
+
+    return render(request, "chat_rooms.html", context)
+def get_static_context(db):
+    # Cache kontrolü (örneğin 10 dakika süreyle saklanır)
+    cached_context = cache.get('static_context')
+    if cached_context:
+        return cached_context
+
+    # Sık değişmeyen veriler
+    group_collection = db[GROUP_COLLECTION]
+    groups = list(group_collection.find())
+    topics = list(db[TOPIC_COLLECTION].find().sort('like', DESCENDING).limit(3))
+    for topic in topics:
+        topic['_id'] = str(topic['_id'])
+
+    # Cache kaydet
+    static_context = {
+        'groups': groups,
+        'topics': topics,
+    }
+    cache.set('static_context', static_context, timeout=600)  # 10 dakika
+    return static_context
 def home(request):
     client = MongoClient(MONGO_URI)
     db = client[DATABASE_NAME]
-
-    username = request.session.get('username')  # Oturumdaki kullanıcı adı
+    username = request.session.get('username')
     user_collection = db[USER_COLLECTION]
     post_collection = db[POST_COLLECTION]
-    group_collection = db[GROUP_COLLECTION]
-
     # Mevcut kullanıcı bilgisi
     current_user = user_collection.find_one({'username': username})
-    friends = get_friends(current_user) if current_user else []
     profile_picture = current_user.get('profile_picture', 'default.png') if current_user else 'default.png'
+    # Kullanıcıları topluca çekme (Profil fotoğrafları için)
+    users = {user['username']: user for user in user_collection.find()}
+    # Gönderiler
+    posts = post_collection.find().sort("created_at", DESCENDING).limit(10)  # İlk 10 gönderi
+    popular_posts = post_collection.find().sort("likes", DESCENDING).limit(3)  # Popüler gönderiler
 
-    # Gönderileri çekme ve her gönderi için profil fotoğrafını bulma
-    posts = post_collection.find().sort("created_at", -1)
-    posts_with_pictures = []
-    for post in posts:
-        post['_id'] = str(post['_id'])  # MongoDB _id'yi stringe çevir
-        post_user = user_collection.find_one({'username': post['username']})
-        post['profile_picture'] = post_user.get('profile_picture', 'default.png') if post_user else 'default.png'
-        posts_with_pictures.append(post)
-
-    # Popüler gönderiler
-    popular_posts = post_collection.find().sort("likes", -1).limit(3)
-    popular_posts = list(popular_posts)
-    for post in popular_posts:
+    # Gönderileri profil fotoğraflarıyla eşleştirme
+    def attach_profile_picture(post):
         post['_id'] = str(post['_id'])
+        post_user = users.get(post['username'])
+        post['profile_picture'] = post_user.get('profile_picture', 'default.png') if post_user else 'default.png'
+        return post
 
-    # Gruplar ve konular
-    groups = group_collection.find()
-    topics = db[TOPIC_COLLECTION].find().sort('like', -1).limit(3)
-    topics = list(topics)
-    for topic in topics:
-        topic['_id'] = str(topic['_id'])
-        context = get_common_context(username, db)
+    posts_with_pictures = [attach_profile_picture(post) for post in posts]
+    popular_posts = [attach_profile_picture(post) for post in popular_posts]
+
+    # Ortak context
     context = get_common_context(username, db)
+    context.update(get_static_context(db))
+    context.update({
+        'posts': posts_with_pictures,
+        'popular_posts': popular_posts,
+    })
+
     return render(request, 'home_page.html', context)
 def get_common_context(username, db):
     user_collection = db[USER_COLLECTION]
     post_collection = db[POST_COLLECTION]
     group_collection = db[GROUP_COLLECTION]
+    topic_collection = db[TOPIC_COLLECTION]
 
-    # Mevcut kullanıcı bilgisi
+    # 1. Mevcut kullanıcı bilgisi
     current_user = user_collection.find_one({'username': username})
     friends = get_friends(current_user) if current_user else []
     profile_picture = current_user.get('profile_picture', 'default.png') if current_user else 'default.png'
 
-    # Gönderiler ve profil fotoğrafları
-    posts = post_collection.find().sort("created_at", -1)
-    posts_with_pictures = []
-    for post in posts:
-        post['_id'] = str(post['_id'])  # MongoDB _id'yi stringe çevir
-        post_user = user_collection.find_one({'username': post['username']})
-        post['profile_picture'] = post_user.get('profile_picture', 'default.png') if post_user else 'default.png'
-        posts_with_pictures.append(post)
+    # 2. Gönderiler ve kullanıcı verileri
+    posts = list(post_collection.find().sort("created_at", -1))
+    user_usernames = {post['username'] for post in posts}  # Tüm kullanıcı adlarını topla
+    users = {user['username']: user for user in user_collection.find({'username': {'$in': list(user_usernames)}})}
 
-    # Popüler gönderiler
-    popular_posts = post_collection.find().sort("likes", -1).limit(3)
-    popular_posts = list(popular_posts)
+    # Gönderilere kullanıcı bilgisi ekle
+    for post in posts:
+        post['_id'] = str(post['_id'])  # _id'yi stringe çevir
+        user = users.get(post['username'])
+        post['profile_picture'] = user.get('profile_picture', 'default.png') if user else 'default.png'
+
+    # 3. Popüler gönderiler
+    popular_posts = list(post_collection.find().sort("likes", -1).limit(3))
     for post in popular_posts:
         post['_id'] = str(post['_id'])
 
-    # Gruplar ve konular
-    groups = group_collection.find()
-    topics = db[TOPIC_COLLECTION].find().sort('like', -1).limit(3)
-    topics = list(topics)
+    # 4. Gruplar ve konular
+    groups = list(group_collection.find())
+    topics = list(topic_collection.find().sort('like', -1).limit(3))
     for topic in topics:
         topic['_id'] = str(topic['_id'])
 
+    # Bağlamı döndür
     return {
-        'posts': posts_with_pictures,
+        'posts': posts,
         'groups': groups,
         'current_user': current_user,
         'friends': friends,
@@ -161,7 +192,7 @@ def topic(request):
     context.update({
 
     })
-    return render(request, "topics.html" ,context)
+    return render(request, "topics.html",context)
 def get_topics(request):
     if request.method == 'GET':
         try:
@@ -173,8 +204,9 @@ def get_topics(request):
             # Konuları düzenle
             for topic in topics:
                 topic['_id'] = str(topic['_id'])
-                topic['likes_count'] = topic.get('like', 0)  # Integer değer al
-                topic['dislikes_count'] = topic.get('dislike', 0)  # Integer değer al
+                topic['likes_count'] = topic.get('like', 0)
+                topic['dislikes_count'] = topic.get('dislike', 0)
+                topic['comment_count'] = topic.get('comment_count', 0)
 
             return JsonResponse({'topics': topics}, safe=False)
 
@@ -201,8 +233,8 @@ def create_topic(request):
                 'username': username,
                 'comments': [],
                 'comment_count': 0,
-                'like': 0,  # Integer olarak başlatıyoruz
-                'dislike': 0  # Integer olarak başlatıyoruz
+                'like': 0,
+                'dislike': 0
             }
 
             result = db[TOPIC_COLLECTION].insert_one(new_topic)
@@ -212,6 +244,7 @@ def create_topic(request):
                 'success': True,
                 'message': 'Topic created successfully!',
                 'topic_id': topic_id,
+                'comment_count': 0,
                 'like': 0,
                 'dislike': 0
             }, status=201)
@@ -275,24 +308,30 @@ def like_topic(request, topic_id):
 
             user_likes = topic.get('user_likes', {})
 
+            # Eğer kullanıcı zaten "liked" ise, beğeniyi kaldır
             if user_likes.get(username) == 'liked':
-                return JsonResponse({'success': False, 'error_message': 'You have already liked this topic.'}, status=400)
+                likes = topic.get('like', 0) - 1
+                user_likes.pop(username)  # Kullanıcının beğenisini kaldır
+            else:
+                # Kullanıcı zaten "disliked" yapmışsa, beğenmeyi kaldır
+                dislikes = topic.get('dislike', 0)
+                if user_likes.get(username) == 'disliked':
+                    dislikes -= 1
 
-            if user_likes.get(username) == 'disliked':
-                return JsonResponse({'success': False, 'error_message': 'You have already disliked this topic. Please remove your dislike before liking.'}, status=400)
+                likes = topic.get('like', 0) + 1
+                user_likes[username] = 'liked'
 
-            # Increment likes
-            likes = topic.get('like', 0)
-            likes += 1
-
-            user_likes[username] = 'liked'
+                db[TOPIC_COLLECTION].update_one(
+                    {'_id': ObjectId(topic_id)},
+                    {'$set': {'dislike': dislikes}}
+                )
 
             db[TOPIC_COLLECTION].update_one(
                 {'_id': ObjectId(topic_id)},
                 {'$set': {'like': likes, 'user_likes': user_likes}}
             )
 
-            return JsonResponse({'success': True, 'message': 'Topic liked successfully!'}, status=200)
+            return JsonResponse({'success': True, 'message': 'Like toggled successfully!', 'like': likes, 'dislike': dislikes}, status=200)
 
         except Exception as e:
             return JsonResponse({'success': False, 'error_message': str(e)}, status=400)
@@ -310,24 +349,30 @@ def dislike_topic(request, topic_id):
 
             user_likes = topic.get('user_likes', {})
 
+            # Eğer kullanıcı zaten "disliked" ise, beğenmeme işlemini kaldır
             if user_likes.get(username) == 'disliked':
-                return JsonResponse({'success': False, 'error_message': 'You have already disliked this topic.'}, status=400)
+                dislikes = topic.get('dislike', 0) - 1
+                user_likes.pop(username)  # Kullanıcının beğenmeme durumunu kaldır
+            else:
+                # Kullanıcı zaten "liked" yapmışsa, beğeniyi kaldır
+                likes = topic.get('like', 0)
+                if user_likes.get(username) == 'liked':
+                    likes -= 1
 
-            if user_likes.get(username) == 'liked':
-                return JsonResponse({'success': False, 'error_message': 'You have already liked this topic. Please remove your like before disliking.'}, status=400)
+                dislikes = topic.get('dislike', 0) + 1
+                user_likes[username] = 'disliked'
 
-            # Increment dislikes
-            dislikes = topic.get('dislike', 0)
-            dislikes += 1
-
-            user_likes[username] = 'disliked'
+                db[TOPIC_COLLECTION].update_one(
+                    {'_id': ObjectId(topic_id)},
+                    {'$set': {'like': likes}}
+                )
 
             db[TOPIC_COLLECTION].update_one(
                 {'_id': ObjectId(topic_id)},
                 {'$set': {'dislike': dislikes, 'user_likes': user_likes}}
             )
 
-            return JsonResponse({'success': True, 'message': 'Topic disliked successfully!'}, status=200)
+            return JsonResponse({'success': True, 'message': 'Dislike toggled successfully!', 'like': likes, 'dislike': dislikes}, status=200)
 
         except Exception as e:
             return JsonResponse({'success': False, 'error_message': str(e)}, status=400)
@@ -346,8 +391,6 @@ def verify_email(request, token):
     else:
         error_message = "Geçersiz doğrulama bağlantısı!"
         return render(request, 'sign_up.html', {'error_message': error_message})
-
-
 def register(request):
     if request.method == 'POST':
         email = request.POST.get('email')
@@ -429,7 +472,6 @@ def login(request):
             return render(request, 'index.html', {'error_message': error_message})
 
     return render(request, 'index.html')
-
 def get_client_ip(request):
     x_forwarded_for = request.META.get('HTTP_X_FORWARDED_FOR')
     if x_forwarded_for:
@@ -518,7 +560,9 @@ def add_post(request):
         post_content = request.POST.get('post_content')
         username = request.session.get('username')
         file_urls = []
-
+        user_collection = db[USER_COLLECTION]
+        current_user = user_collection.find_one({'username': username})
+        profile_picture = current_user.get('profile_picture', 'default.png') if current_user else 'default.png'
         if 'post_files' in request.FILES:
             files = request.FILES.getlist('post_files')
             fs = FileSystemStorage()
@@ -533,7 +577,7 @@ def add_post(request):
         post_saved = save_post_to_mongo(username, post_content, file_urls)
 
         if post_saved:
-            return JsonResponse({'success': True, 'username': username, 'post_content': post_content, 'file_urls': file_urls, 'likes': 0})
+            return JsonResponse({'success': True, 'username': username, 'post_content': post_content, 'file_urls': file_urls, 'likes': 0,'profile_picture': profile_picture,'comment_count':0})
         else:
             return JsonResponse({'success': False, 'error_message': 'Post kaydedilemedi.'})
 
@@ -563,17 +607,28 @@ def like_post(request):
         post_id = request.POST.get('post_id')
         username = request.session.get('username')
 
+        if not username:
+            return JsonResponse({'success': False, 'error_message': 'You need to be logged in to like posts.'})
+
         post = db['posts'].find_one({'_id': ObjectId(post_id)})
 
         if post:
-            if username in post['liked_by']:
-                return JsonResponse({'success': False, 'error_message': 'You have already liked this post.'})
+            # Eğer kullanıcı zaten beğendiyse, beğeniyi geri çek
+            if username in post.get('liked_by', []):
+                db['posts'].update_one(
+                    {'_id': ObjectId(post_id)},
+                    {'$inc': {'likes': -1}, '$pull': {'liked_by': username}}
+                )
+                return JsonResponse({'success': True, 'likes': post['likes'] - 1, 'liked': False})
             else:
+                # Kullanıcı beğeniyi ekler
                 db['posts'].update_one(
                     {'_id': ObjectId(post_id)},
                     {'$inc': {'likes': 1}, '$push': {'liked_by': username}}
                 )
-                return JsonResponse({'success': True, 'likes': post['likes'] + 1})
+                return JsonResponse({'success': True, 'likes': post['likes'] + 1, 'liked': True})
+
+        return JsonResponse({'success': False, 'error_message': 'Post not found.'})
 
     return JsonResponse({'success': False, 'error_message': 'Invalid request.'})
 def logout(request):

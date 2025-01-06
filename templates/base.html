@@ -36,10 +36,10 @@
                 </button>
             </nav>
             <div class="menu-item">
-                <button type="button" onclick="window.location.href='/home';" class="btn btn-secondary">Ana Sayfa</button>
+                <button type="button" onclick="window.location.href='/home';" class="button-l">Ana Sayfa</button>
             </div>
-            <div class="menu-item"><button type="button" class="btn btn-secondary">Grup Odaları</button></div>
-            <div class="menu-item"><button type="button" onclick="window.location.href='{% url 'topics' %}';" class="btn btn-secondary">Gündem Konular</button></div>
+            <div class="menu-item"><button type="button"onclick="window.location.href='{% url 'chat_rooms' %}';" class="button-l">Grup Odaları</button></div>
+            <div class="menu-item"><button type="button" onclick="window.location.href='{% url 'topics' %}';" class="button-l">Gündem Konular</button></div>
 
            <button class="button-33" role="button" onclick="">Populer Postlar</button>
             <ul style="list-style-type: none; padding-left: 15px;">
@@ -48,9 +48,9 @@
                         <li>
                             <div class="post-content" style="margin-top: 15px">
                                 <!-- Pass the post's ID as a URL parameter -->
-                                <button class="button-60" role="button"
+                                <button class="full-rounded button-item" role="button"
                                     onclick="window.location.href='{% url 'post_view' post_id=post|get_id %}'">
-                                    {{ post.content }}
+                                    <span>{{ post.content }}</span><div class="full-rounded"></div>
                                 </button>
                             </div>
                         </li>
@@ -74,7 +74,10 @@
                 <ul style="padding-top: 15px; list-style-type: none; padding-left: 15px;">
                     {% if groups %}
                         {% for group in groups %}
-                            <li><button class="button-60" role="button">{{ group.name }}</button></li>
+                            <li><button class="full-rounded button-item" role="button">
+                               <span> {{ group.name }}
+                            </span><div class="full-rounded"></div>
+                            </button></li>
                         {% endfor %}
                     {% else %}
                         <li><p>Henüz grup eklenmedi.</p></li>
@@ -84,9 +87,9 @@
                     <ul style="padding-top: 15px; list-style-type: none; padding-left: 15px;">
                         {% for topic in topics %}
                                 <li>
-                                    <button class="button-60" role="button"
+                                    <button class="full-rounded button-item" role="button"
                                         onclick="window.location.href='{% url 'topics' %}#topic_{{ topic|get_id }}'">
-                                        {{ topic.title }}
+                                        <span>{{ topic.title }}</span><div class="full-rounded"></div>
                                     </button>
                                 </li>
                         {% endfor %}

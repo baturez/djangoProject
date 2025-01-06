@@ -18,6 +18,7 @@ urlpatterns = [
     path('register/', views.register, name='register'),
     path('home/', views.home, name='home'),
     path('topics/', views.topic, name='topics'),
+    path('chat-rooms/', views.chat_rooms, name='chat_rooms'),
     path('api/create_topic/', views.create_topic, name='create_topic'),
     path('api/get_topics/', views.get_topics, name='get_topics'),
     path('api/add_comment_topic/', views.add_comment_topic, name='add_comment_topic'),

@@ -154,11 +154,11 @@ class ChatConsumer(AsyncWebsocketConsumer):
 
         if unread_message:
             notifications_collection.insert_one({
-                "receiver": receiver,
+
                 "sender": sender,
                 "message": f"New message from {sender}: {message}",
                 "timestamp": datetime.now(),
-                "read": False
+
             })
 
     @sync_to_async
@@ -251,4 +251,50 @@ class GroupChatConsumer(AsyncWebsocketConsumer):
             'message': message,
             'sender': sender,
             'timestamp': timestamp
+        }))
+
+
+
+
+class ChatRoomConsumer(AsyncWebsocketConsumer):
+    async def connect(self):
+        self.room_name = self.scope['url_route']['kwargs']['room_name']
+        self.room_group_name = f'chat_{self.room_name}'
+
+        # Join room group
+        await self.channel_layer.group_add(
+            self.room_group_name,
+            self.channel_name
+        )
+        await self.accept()
+
+    async def disconnect(self, close_code):
+        await self.channel_layer.group_discard(
+            self.room_group_name,
+            self.channel_name
+        )
+
+    async def receive(self, text_data):
+        text_data_json = json.loads(text_data)
+        message = text_data_json['message']
+        sender = text_data_json['sender']
+
+        # Send message to room group (broadcast to all users in the room)
+        await self.channel_layer.group_send(
+            self.room_group_name,
+            {
+                'type': 'chat_message',
+                'message': message,
+                'sender': sender
+            }
+        )
+
+    async def chat_message(self, event):
+        message = event['message']
+        sender = event['sender']
+
+        # Send message to WebSocket
+        await self.send(text_data=json.dumps({
+            'message': message,
+            'sender': sender
         }))

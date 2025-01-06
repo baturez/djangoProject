@@ -43,7 +43,14 @@
            <ul id="groupList" style="padding-top: 15px; list-style-type: none; padding-left: 15px;">
     {% if groups %}
         {% for group in groups %}
-            <li><a href="/group/{{ group.id }}" class="button-60">{{ group.name }}</a></li>
+            <li>
+               <button class="cta">
+  <span class="hover-underline-animation" onclick="window.location='/group/{{ group.id }}'">
+    {{ group.name }}
+  </span>
+</button>
+
+            </li>
         {% endfor %}
     {% else %}
         <li><p>Henüz grup eklenmedi.</p></li>

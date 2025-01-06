@@ -189,7 +189,7 @@ $(document).ready(function(){
                     const newPost = `
                         <div class="post">
                             <div class="post-header">
-                                <img src="https://picsum.photos/200" class="pp-img">
+                                <img src="/media/${ response.profile_picture }" class="pp-img">
                                 <h4>${response.username}</h4>
                             </div>
                             <p>${response.post_content}</p>
@@ -231,22 +231,30 @@ $(document).ready(function(){
     });
 
     // Like button functionality
-    $(document).on('click', '.like-btn', function() {
-    const postId = $(this).data('post-id');   // Ensure this is not an empty string
+   $(document).on('click', '.like-btn', function() {
+    const postId = $(this).data('post-id');
     const button = $(this);
 
     $.ajax({
         type: 'POST',
         url: '{% url "like_post" %}',
         data: {
-            post_id: postId,  // Ensure the post_id is correctly passed here
+            post_id: postId,
             csrfmiddlewaretoken: '{{ csrf_token }}'
         },
         success: function(response) {
             if (response.success) {
-                button.html(`
-                    <img style="width: 20px" src="{% static 'images/like.png' %}"> ${response.likes}
-                `);
+                if (response.liked) {
+                    // Beğeni eklendi
+                    button.html(`
+                        <img style="width: 20px" src="{% static 'images/like.png' %}"> ${response.likes}
+                    `);
+                } else {
+                    // Beğeni geri çekildi
+                    button.html(`
+                        <img style="width: 20px" src="{% static 'images/like.png' %}"> ${response.likes}
+                    `);
+                }
             } else {
                 alert(response.error_message);
             }

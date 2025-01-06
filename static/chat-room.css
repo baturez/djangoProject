@@ -1,0 +1,163 @@
+/* Genel Sayfa Tasarımı */
+body {
+    font-family: 'Arial', sans-serif;
+    background-color: #f8f9fa;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 100vh;
+    overflow: hidden;
+}
+
+/* Başlık */
+h1 {
+    text-align: center;
+    font-size: 2.5rem;
+    color: #4A90E2;
+    margin-bottom: 20px;
+    animation: fadeIn 1s ease-out;
+}
+
+/* Oda Listesi */
+#room-list {
+    background-color: #ffffff;
+    border-radius: 8px;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+    padding: 10px;
+    width: 100%;
+    margin-right: 20px;
+    overflow-y: auto;
+    max-height: 80vh;
+    animation: slideInFromLeft 0.5s ease-out;
+}
+
+/* Oda Butonları */
+.list-group-item {
+    background-color: #fff;
+    border: none;
+    border-radius: 5px;
+    margin-bottom: 10px;
+    font-size: 1.1rem;
+    transition: transform 0.2s ease-in-out;
+}
+
+.list-group-item:hover {
+    transform: scale(1.05);
+    background-color: #f2f2f2;
+}
+
+/* Oda İçeriği */
+#room-content {
+    background-color: #ffffff;
+    border-radius: 8px;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+    padding: 20px;
+    width: 100%;
+    max-height: 80vh;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-start;
+    animation: fadeIn 1s ease-out;
+}
+
+/* Mesaj Logu */
+#chat-log-room1 {
+    background-color: #f1f1f1;
+    border-radius: 5px;
+    padding: 15px;
+    height: 300px;
+    overflow-y: auto;
+    margin-bottom: 10px;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    animation: fadeIn 1s ease-out;
+}
+
+/* Mesaj Gönderme Alanı */
+input[type="text"] {
+    padding: 10px;
+    border-radius: 5px;
+    border: 1px solid #ddd;
+    margin-right: 10px;
+    width: 80%;
+    font-size: 1rem;
+    transition: all 0.3s ease;
+}
+
+input[type="text"]:focus {
+    border-color: #4A90E2;
+    outline: none;
+    box-shadow: 0 0 5px rgba(74, 144, 226, 0.5);
+}
+
+/* Gönder Butonu */
+button {
+    padding: 10px 20px;
+    border-radius: 5px;
+    border: none;
+    background-color: #4A90E2;
+    color: white;
+    cursor: pointer;
+    font-size: 1.1rem;
+    transition: transform 0.2s ease;
+}
+
+button:hover {
+    transform: scale(1.1);
+    background-color: #357ABD;
+}
+
+/* Mesajlar */
+.sender {
+    color: #4A90E2;
+    font-weight: bold;
+}
+
+.recipient {
+    color: #27AE60;
+}
+
+.chat-room p {
+    margin-bottom: 10px;
+    animation: fadeIn 0.5s ease-out;
+}
+
+/* Oda Gösterme Animasyonu */
+@keyframes fadeIn {
+    0% {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+    100% {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+@keyframes slideInFromLeft {
+    0% {
+        transform: translateX(-100%);
+    }
+    100% {
+        transform: translateX(0);
+    }
+}
+
+.sending-indicator {
+    font-size: 1rem;
+    color: #ff6f61;
+    font-weight: bold;
+    margin-top: 10px;
+    animation: fadeIn 1s ease-out;
+}
+
+@keyframes fadeIn {
+    0% {
+        opacity: 0;
+    }
+    100% {
+        opacity: 1;
+    }
+}

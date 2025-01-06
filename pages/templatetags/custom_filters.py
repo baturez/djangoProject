@@ -31,3 +31,6 @@ def round_to(value, decimals=2):
 def get_id(value):
     """Returns the ID of the object."""
     return str(value.get('_id')) if value and '_id' in value else None
+@register.filter
+def to_range(value):
+    return range(1, value + 1)

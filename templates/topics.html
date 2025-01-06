@@ -7,7 +7,7 @@
 {% block content %}
 <link rel="stylesheet" href="{% static 'topics.css' %}">
     <link rel="stylesheet" href="{% static 'css/bootstrap.min.css' %}">
-    
+
 <div>
     <h1>Konular</h1>
 
@@ -38,7 +38,6 @@
                     {{ topic.title }}
                 </h4>
 
-                <!-- Konunun Gizli İçeriği -->
                 <div id="topic_content_{{ topic|get_id }}" class="hidden">
                     <p>{{ topic.description }}</p>
                     <p>
@@ -48,11 +47,11 @@
                     <button onclick="likeTopic('{{ topic|get_id }}')">Beğen</button>
                     <button onclick="dislikeTopic('{{ topic|get_id }}')">Beğenme</button>
 
-                    <h5>Yorumlar:</h5>
+                    <h5>Yorumlar: {{ topic.comment_count }} </h5>
                     <button onclick="toggleComments('{{ topic|get_id }}')">Yorumları Göster/Gizle</button>
                     <div class ="hidden">
                     <ul id="comments_{{ topic|get_id }}" ></ul>
-                    
+
                     <form id="commentForm_{{ topic|get_id }}" onsubmit="addComment(event, '{{ topic|get_id }}')">
                         <input type="text" id="comment_text_{{ topic|get_id }}" placeholder="Yorum yazın...">
                         <button type="submit">Yorum Yap</button>
@@ -86,7 +85,6 @@
         })
         .then(response => response.json())
         .then(data => {
-            alert(data.message);
             loadTopics();
             document.getElementById('createTopicForm').reset();
         })
@@ -112,9 +110,9 @@
                         </p>
                         <button onclick="likeTopic('${topic._id}')">Beğen</button>
                         <button onclick="dislikeTopic('${topic._id}')">Beğenme</button>
-                        <h5>Yorumlar:</h5>
+                        <h5>Yorumlar: ${topic.comment_count}</h5>
                         <button onclick="toggleComments('${topic._id}')">Yorumları Göster/Gizle</button>
-                        
+
                         <ul id="comments_${topic._id}" class="hidden"></ul>
                         <form id="commentForm_${topic._id}" onsubmit="addComment(event, '${topic._id}')">
                             <input type="text" id="comment_text_${topic._id}" placeholder="Yorum yazın...">
@@ -134,9 +132,9 @@ function setTopicHash(topicId) {
 
 function addComment(event, topicId) {
     event.preventDefault();
-    
+
     const commentText = document.getElementById(`comment_text_${topicId}`).value;
-    
+
     if (!commentText) {
         alert('Yorum metni boş olamaz!');
         return;
@@ -156,7 +154,6 @@ function addComment(event, topicId) {
     .then(response => response.json())
     .then(data => {
         if (data.success) {
-            alert('Yorum başarıyla eklendi!');
             loadComments(topicId);
         } else {
             alert('Yorum eklenemedi: ' + data.error);
@@ -176,9 +173,8 @@ function likeTopic(topicId) {
     .then(response => response.json())
     .then(data => {
         if (data.success) {
-            alert(data.message);
+            
         } else {
-            alert(data.error_message || "Unknown error occurred.");
         }
         loadTopics();
     })
@@ -199,9 +195,7 @@ function dislikeTopic(topicId) {
     .then(response => response.json())
     .then(data => {
         if (data.success) {
-            alert(data.message);
         } else {
-            alert(data.error_message || "Unknown error occurred.");
         }
         loadTopics();
     })
