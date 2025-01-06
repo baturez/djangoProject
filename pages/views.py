@@ -363,11 +363,11 @@ def register(request):
                 error_message = "Bu kullanıcı adı zaten kullanılıyor."
             return render(request, 'sign_up.html', {'error_message': error_message})
 
-        # Yeni kayıt yapılıyor
-        if save_to_mongo(email, username, password):
+        ip_address = get_client_ip(request)
+
+        if save_to_mongo(email, username, password, ip_address):
             success_message = "Kayıt işlemi başarılı! Lütfen e-posta adresinizi doğrulayın."
 
-            # Yeni benzersiz token oluşturuluyor
             token = str(uuid.uuid4())  # Benzersiz token
             user_collection.update_one(
                 {"email": email},
@@ -376,23 +376,20 @@ def register(request):
 
             verification_link = f"https://bartini.online/verify/{token}"
 
-
             subject = "E-posta Doğrulaması"
 
-            # HTML şablonunu render et
             message = render_to_string('email/verify_email.html', {
                 'username': username,
                 'verification_link': verification_link,
             })
 
-            # HTML e-posta gönderme
             email_message = EmailMessage(
                 subject,
                 message,
                 'no-reply@bartini.com',
                 [email]
             )
-            email_message.content_subtype = "html"  # HTML formatında göndermek için
+            email_message.content_subtype = "html"
             email_message.send()
 
             return render(request, 'sign_up.html', {'success_message': success_message})
@@ -432,7 +429,15 @@ def login(request):
             return render(request, 'index.html', {'error_message': error_message})
 
     return render(request, 'index.html')
-def save_to_mongo(email, username, password):
+
+def get_client_ip(request):
+    x_forwarded_for = request.META.get('HTTP_X_FORWARDED_FOR')
+    if x_forwarded_for:
+        ip = x_forwarded_for.split(',')[0]
+    else:
+        ip = request.META.get('REMOTE_ADDR')
+    return ip
+def save_to_mongo(email, username, password, ip_address):
     try:
         client = MongoClient(MONGO_URI)
         client.server_info()
@@ -447,7 +452,9 @@ def save_to_mongo(email, username, password):
             "username": username,
             "password": hashed_password,
             "friends": [],
-            "profile_picture": default_profile_picture
+            "profile_picture": default_profile_picture,
+            "ip_address": ip_address,
+            'created_at': datetime.now()
         }
 
         result = collection.insert_one(user_data)
