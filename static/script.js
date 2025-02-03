@@ -9,11 +9,9 @@ function validateForm() {
     var username = document.getElementById("username").value;
     var password = document.getElementById("password").value;
     
-    // Kullanıcı adı ve şifre boş mu kontrolü
     if (username === "" || password === "") {
         alert("Kullanıcı adı ve şifre alanları doldurulmalıdır.");
     } else {
-        // Formu sunucuya gönder
         document.querySelector('.login-form').submit();
     }
 }

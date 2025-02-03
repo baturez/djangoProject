@@ -6,6 +6,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <link rel="stylesheet" href="{% static 'css/bootstrap.min.css' %}">
     <title>Bartini - Giriş</title>
+    <link rel="icon" type="image/x-icon" href="{% static 'images/favicon.ico' %}">
+    
     <link rel="stylesheet" href="{% static 'style.css' %}">
     <script src="{% static 'script.js' %}"></script>
 </head>
@@ -18,13 +20,14 @@
         </div>
     </nav>
 
-    <div class="container-fluid d-flex justify-content-center align-items-center a">
+    <div class="container d-flex justify-content-center align-items-center a">
         <div class="row w-100">
             <!-- Sol Kısım: Background ve Hesap Oluşturun -->
             <div class="col-md-6 background-section" style="padding-left: 0px; " >
                 <div class="container center background-overlay"style="padding-left: 10px" >
                     <div class="left-section">
                         <button class="inputs" onclick="window.location.href='/signup';">Hesap Oluşturun</button>
+                        
                     </div>
                 </div>
             </div>
@@ -42,6 +45,7 @@
                                 <input type="password" id="password" name="password" class="input-field" placeholder=" " required>
                                 <label for="password" class="input-label">Şifre</label>
                             </div>
+                                                    {% csrf_token %}
                             <button type="submit" class="login-button">Giriş Yap</button>
 
                             {% if error_message %}

@@ -1,6 +1,6 @@
 $(document).ready(function () {
     $('#profilePictureForm').submit(function (event) {
-        event.preventDefault(); // Prevent form submission
+        event.preventDefault();
 
         let formData = new FormData(this);
 
@@ -8,11 +8,11 @@ $(document).ready(function () {
             type: 'POST',
             url: "{% url 'upload_profile_picture' %}",
             data: formData,
-            contentType: false, // Tell jQuery not to set contentType
-            processData: false, // Tell jQuery not to process data
+            contentType: false,
+            processData: false,
             success: function (response) {
                 if (response.success) {
-                    $('.profile-img img').attr('src', response.url); // Update image source
+                    $('.profile-img img').attr('src', response.url);
                 } else {
                     alert(response.error_message);
                 }

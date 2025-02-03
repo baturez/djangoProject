@@ -2,11 +2,12 @@
 {% load static %}
 {% load custom_filters %}
 
-{% block title %}Topics{% endblock %}
-
+{% block title %}Gündem Konular{% endblock %}
+    <link rel="icon" type="image/x-icon" href="{% static 'images/favicon.ico' %}">
 {% block content %}
 <link rel="stylesheet" href="{% static 'topics.css' %}">
     <link rel="stylesheet" href="{% static 'css/bootstrap.min.css' %}">
+    <link rel="stylesheet" href="{% static 'home.css' %}">
 
 <div>
     <h1>Konular</h1>
@@ -126,7 +127,6 @@
             .catch(error => console.error('Error loading topics:', error));
     }
 function setTopicHash(topicId) {
-    // Update the URL hash to reflect the clicked topic
     window.location.hash = `#topic_${topicId}`;
 }
 
@@ -223,7 +223,6 @@ function loadComments(topicId) {
    window.onload = function() {
     const topicHash = window.location.hash;
 
-    // Scroll to the topic if a hash exists
     if (topicHash) {
         const topicElement = document.querySelector(topicHash);
         if (topicElement) {
@@ -231,9 +230,8 @@ function loadComments(topicId) {
         }
     }
 
-    loadTopics();  // Make sure the topics are loaded after the page loads
+    loadTopics();  
 
-    // Listen for hash changes in case the user clicks on a topic link
     window.addEventListener('hashchange', function() {
         const topicHash = window.location.hash;
         const topicElement = document.querySelector(topicHash);
@@ -253,17 +251,17 @@ function loadComments(topicId) {
  function toggleTopicContent(topicId) {
         const topicContent = document.getElementById(`topic_content_${topicId}`);
         if (topicContent.classList.contains('hidden')) {
-            topicContent.classList.remove('hidden'); // İçeriği göster
+            topicContent.classList.remove('hidden'); 
         } else {
-            topicContent.classList.add('hidden'); // İçeriği gizle
+            topicContent.classList.add('hidden'); 
         }
     }
        function toggleComments(topicId) {
         const comments = document.getElementById(`comments_${topicId}`);
         if (comments.classList.contains('hidden')) {
-            comments.classList.remove('hidden'); // Yorumları göster
+            comments.classList.remove('hidden'); 
         } else {
-            comments.classList.add('hidden'); // Yorumları gizle
+            comments.classList.add('hidden'); 
         }
     }
 </script>

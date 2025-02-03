@@ -2,11 +2,14 @@
 {% load static %}
 {% load custom_filters %}
 
-{% block title %}Post View{% endblock %}
+{% block title %}Post{% endblock %}
+    <link rel="icon" type="image/x-icon" href="{% static 'images/favicon.ico' %}">
+
 {% block content %}
 <link rel="stylesheet" href="{% static 'topics.css' %}">
     <link rel="stylesheet" href="{% static 'css/bootstrap.min.css' %}">
-    
+        <link rel="stylesheet" href="{% static 'home.css' %}">
+
    <div class="posts-container">
     {% if post %}
         <div class="post">
@@ -16,7 +19,6 @@
             </div>
             <p>{{ post.content }}</p>
 
-            <!-- Display media if available -->
             {% if post.file_urls %}
                 <div class="post-media">
                     {% for url in post.file_urls %}
@@ -56,7 +58,6 @@
                     <p>No comments yet.</p>
                 {% endif %}
 
-                <!-- Add Comment Form -->
                 <form method="post" action="{% url 'add_comment' %}" class="add-comment-form" id="comment-form-{{ post|get_post_id }}" onsubmit="return submitComment(event, '{{ post|get_post_id }}')">
                     {% csrf_token %}
                     <input type="hidden" name="post_id" value="{{ post|get_post_id }}">

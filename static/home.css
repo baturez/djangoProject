@@ -10,48 +10,277 @@
     height: 100vh;
     position: relative;
 }
+.story-username {
+    font-weight: bold;
+    margin-bottom: 10px;
+    text-align: center;
+}
 
+.story-upload-container {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    margin: 20px 0;
+        position: relative;
 
-.large-story-container {
-    position: fixed;
+}
+.upload-label img {
+    width: 100%;
+    border-radius: 50%;
+    transition: filter 0.3s ease; /* Smooth transition for blur effect */
+}
+
+.upload-label {
+        position: relative;
+    display: inline-block;
+    border-radius: 50%;
+    font-size: 14px;
+    font-weight: bold;
+    cursor: pointer;
+    transition: background-color 0.3s ease;
+    margin-right: 10px;
+}
+
+.upload-label:hover img {
+    filter: blur(5px); /* Apply blur */
+}
+.upload-label::after {
+    content: "+"; /* Add a "+" symbol */
+    position: absolute;
     top: 0;
     left: 0;
     width: 100%;
     height: 100%;
-    background: rgba(51, 51, 51, 0.2);
     display: flex;
     justify-content: center;
     align-items: center;
-    z-index: 1000;
-}
-
-.large-story-container img {
-    max-width: 100%;
-    max-height: 100%;
-    border-radius: 10px;
-}
-
-.close-btn {
-    position: absolute;
-    top: 20px;
-    right: 30px;
+    background-color: rgba(0, 0, 0, 0.5); /* Semi-transparent dark background */
     color: white;
-    font-size: 2rem;
+    font-size: 3rem;
+    border-radius: 50%;
+    opacity: 0; /* Initially hidden */
+    transition: opacity 0.3s ease, background-color 0.3s ease; /* Smooth transition for opacity and color */
+}
+
+/* Show the "+" icon when hovering over the label */
+.upload-label:hover::after {
+    opacity: 1; /* Make the icon visible */
+    background-color: rgba(0, 0, 0, 0.7); /* Darker background for the "+" icon */
+}
+#storyUpload {
+    display: none;
+}
+
+.upload-button {
+    background-color: #007BFF;
+    color: white;
+    padding: 10px 20px;
+    border: none;
+    border-radius: 25px;
+    font-size: 14px;
     cursor: pointer;
+    transition: background-color 0.3s ease;
+}
+
+.upload-button:hover {
+    background-color: #0056b3;
+}
+
+.story-list {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+        flex-wrap: wrap;
+
+}
+
+.story-group {
+    display: inline-block;
+    overflow-x: auto;
+    flex-direction: column;
+}
+/* Large Story Container */
+.large-story-container {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.8);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  padding: 10px;
+  overflow: hidden;
+}
+.large-username {
+    position: absolute;
+    top: 20px; /* Görselin üst kısmında yer alacak */
+    left: 50%;
+    transform: translateX(-50%);
+    font-family: 'Arial', sans-serif; /* Estetik bir font */
+    font-size: 24px;
+    color: #fff; /* Beyaz renk */
+    text-shadow: 2px 2px 8px rgba(0, 0, 0, 0.5);
+    font-weight: bold;
+    letter-spacing: 1px;
+    padding: 10px;
+    border-radius: 5px;
+    background: rgba(0, 0, 0, 0.6);
+    z-index: 1;
+
+}
+.large-username {
+        animation: fadeIn 0.8s ease-out;
+
+}
+
+@keyframes fadeIn {
+    0% {
+        opacity: 0;
+        transform: translateX(-50%) translateY(-20px);
+    }
+    100% {
+        opacity: 1;
+        transform: translateX(-50%) translateY(0);
+    }
+}
+/* Image styling */
+.large-story-container img {
+  width: 100%; /* Resim genişliği ekranın tamamına yayılır */
+  height: auto; /* Yükseklik, genişlik oranına göre ayarlanır */
+  max-width: 50%;  /* Resim genişliği %80 ile sınırlandırılır */
+  max-height: 80%; /* Yükseklik %90 ile sınırlanır */
+  border-radius: 15px; /* Yuvarlatılmış köşeler */
+  object-fit: contain; /* Resim, genişlik ve yükseklik oranını bozmadan görüntülenir */
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.7); /* Gölgeleme efekti */
+     margin-left: 373px;
+    margin-top: 70px ;
+}
+.modal {
+    display: none;
+    position: fixed;
+    z-index: 1;
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
+    overflow: auto;
+    background-color: rgba(0,0,0,0.4);
+    padding-top: 60px;
+}
+
+.modal-content {
+    background-color: #fff;
+    margin: auto;
+    padding: 20px;
+    border: 1px solid #888;
+    width: 80%;
+    max-width: 500px;
+}
+
+.close {
+    color: #aaa;
+    float: right;
+    font-size: 28px;
+    font-weight: bold;
+}
+
+.close:hover,
+.close:focus {
+    color: black;
+    text-decoration: none;
+    cursor: pointer;
+}
+/* Ön izleme resmi stilini ayarlıyoruz */
+#imagePreviewContainer {
+    text-align: center;
+}
+
+#imagePreview {
+    max-width: 100%;
+    height: auto;
+    margin-bottom: 20px;
+}
+.close-btn {
+  position: absolute;
+  top: 10px;
+  right: 20px;
+  font-size: 30px;
+  color: white;
+  cursor: pointer;
+  transition: color 0.3s;
+}
+.close-btn:hover {
+  color: rgba(255, 255, 255, 0.7);
 }
 .sidebar {
     background-color: #f8f9fa;
     padding: 20px;
     border-left: 1px solid rgba(172, 172, 172, 0.67);
 }
+.story img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+.story {
+  cursor: pointer;
+  border-radius: 50%;
+  overflow: hidden;
+  width: 80px;
+  height: 80px;
+  border: 2px solid #ddd;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 
+}
+.story-nav {
+  position: absolute;
+  top: 50%;
+  left: 0;
+  right: 0;
+  display: flex;
+  justify-content: space-between;
+  padding: 0 20px;
+}
+.story-nav button {
+  background: rgba(255, 255, 255, 0.6);
+  border: none;
+  border-radius: 50%;
+  width: 40px;
+  height: 40px;
+  cursor: pointer;
+  font-size: 20px;
+}
+
+.story-nav button:hover {
+  background: rgba(255, 255, 255, 1);
+}
+#prevStory, #nextStory {
+  background-color: rgba(0, 0, 0, 0.5);
+  color: white;
+  font-size: 30px;
+  border: none;
+  padding: 10px;
+  border-radius: 50%;
+  cursor: pointer;
+  transition: background-color 0.3s;
+        padding-top: 0px;
+
+}
+
+#prevStory:hover, #nextStory:hover {
+  background-color: rgba(0, 0, 0, 0.8);
+}
 .story-container {
-    display: flex;
-    gap: 15px;
-    padding: 10px 25px;
+  display: flex;
+  gap: 10px;
+    height: 140px;
     overflow-x: auto;
-    scrollbar-width: none;
-    -ms-overflow-style: none;
+     white-space: nowrap;
 }
 
 .story-container::-webkit-scrollbar {
@@ -60,11 +289,14 @@
 
 
 .story-img {
-    height: 60px;
-    width: 60px;
+    width: 100px;
+    height: 100px;
     object-fit: cover;
-    border: 2px solid #4c76e2;
-    border-radius: 50%;
+    border-radius: 10px;
+}
+.user-story-container {
+    display: flex;
+    gap: 10px;
 }
 
 .content {
@@ -109,7 +341,7 @@
 .create-post textarea {
     max-width: 800px;
     width: 100%;
-    height: 150px; /* Adjust as needed */
+    height: 80px;
     border: 1px solid #ccc;
     border-radius: 8px;
     font-size: 14px;
@@ -151,7 +383,7 @@
     align-items: center;
 }
 .submit-btn {
-    background-color: #007bff; /* Mavi Renk */
+    background-color: #007bff;
     color: #fff;
     border: none;
     border-radius: 5px;
@@ -196,7 +428,6 @@
     object-fit: cover;
 }
 
-/* Remove button styles */
 .remove-btn {
     display: inline-block;
     background-color: #ff5e57;
@@ -289,7 +520,7 @@
 
 nav {
     display: flex;
-    justify-content: space-between;
+    justify-content: center;
     margin-bottom: 15px;
 }
 
@@ -310,7 +541,6 @@ nav a:hover {
 
 
 
-/* CSS */
 .button-60 {
   align-items: center;
   appearance: none;
@@ -359,11 +589,10 @@ nav a:hover {
   background-color: rgba(76, 118, 226, 0.48);
   border-radius: 100px;
   box-shadow: rgba(76, 118, 226, 0.18) 0 -25px 18px -14px inset, rgba(76, 118, 226, 0.26) 0 1px 2px, rgba(76, 118, 226, 0.42) 0 2px 4px, rgba(76, 118, 226, 0.65) 0 4px 8px,rgba(44, 187, 99, .15) 0 8px 16px,rgba(44, 187, 99, .15) 0 16px 32px;
-  color: #008000;
   cursor: pointer;
   display: inline-block;
   font-family: CerebriSans-Regular,-apple-system,system-ui,Roboto,sans-serif;
-  padding: 7px 20px;
+  padding: 10px 42px;
     margin-left: 7px;
   text-align: center;
   text-decoration: none;
@@ -391,18 +620,18 @@ nav a:hover {
   width: 40px;
   margin-top: -8px;
   position: absolute;
-  right: -63px; /* Resim metinden 50px sağda olacak */
-  top: 0; /* Metinle hizalanması için */
-  border-radius: 50%; /* Kapsayıcıyı dairesel yap */
-  box-shadow: 5px 5px 10px rgb(51, 51, 51); /* Gölge */
-  overflow: hidden; /* Resim kapsayıcıdan taşarsa gizle */
+  right: -63px;
+  top: 0;
+  border-radius: 50%;
+  box-shadow: 5px 5px 10px rgb(51, 51, 51);
+  overflow: hidden;
 }
 
 .profile-img-l img {
-  width: 100%; /* Resmi kapsayıcı genişliğine ayarla */
-  height: 100%; /* Resmi kapsayıcı yüksekliğine ayarla */
-  object-fit: cover; /* Resmi düzgün bir şekilde ortala ve kırp */
-  border-radius: 50%; /* Resmi dairesel yap */
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: 50%;
 }
 .pp-img {
   height: 40px;
@@ -584,7 +813,6 @@ nav a:hover {
     text-align: center;
 }
 
-/* Dosya Yükleme Etiketi */
 .file-upload-label {
     cursor: pointer;
     color: #4a90e2;
@@ -605,19 +833,16 @@ nav a:hover {
     border-color: #80c1ff;
 }
 
-/* Dosya Girdisi */
 .file-upload-input {
     display: none;
 }
 
-/* Dosya Bilgi Alanı */
 .file-info {
     margin-top: 10px;
     font-size: 14px;
     color: #333;
 }
 
-/* İlerleme Çubuğu */
 .upload-progress-container {
     margin-top: 10px;
     width: 100%;
@@ -658,8 +883,8 @@ nav a:hover {
     background-color: #0056b3;
 }
 .toggle-chat-btn.new-message {
-    background-color: red;  /* Kırmızı arka plan */
-    color: yellow;  /* Sarı yazı */
+    background-color: red;
+    color: yellow;
 }
 .new-message-indicator {
     position: absolute;
@@ -684,41 +909,41 @@ nav a:hover {
 }
 @media (max-width: 768px) {
     .menu {
-        padding: 10px; /* Reduce padding on smaller screens */
+        padding: 10px;
     }
 
     .sidebar {
-        padding: 10px; /* Reduce padding on smaller screens */
+        padding: 10px;
     }
 
     .chat-bar {
-    width: 100%; /* Use full width on smaller screens */
-    max-width: 400px; /* Set a max width for larger screens */
-    right: 0; /* Position it at the right */
+    width: 100%;
+    max-width: 400px;
+    right: 0;
 }
 
     .menu-item button {
-        width: 100%; /* Full width buttons on mobile */
+        width: 100%;
     }
 }
 
 @media (min-width: 769px) and (max-width: 1024px) {
     .menu {
-        padding: 15px; /* Adjust padding for tablet */
+        padding: 15px;
     }
 
     .chat-bar {
-        width: 80%; /* Adjust chat bar for tablets */
+        width: 80%;
     }
 }
 
 @media (max-width: 768px) {
     .menu-item {
-        font-size: 14px; /* Smaller font size for mobile */
+        font-size: 14px;
     }
 
     .profile-text {
-        font-size: 12px; /* Adjust profile text */
+        font-size: 12px;
     }
 }
 
@@ -730,7 +955,7 @@ nav a:hover {
 }
 
 .upload-btn {
-    background-color: #28a745; /* Yeşil Renk */
+    background-color: #28a745;
     color: #fff;
     border: none;
     border-radius: 5px;
@@ -765,7 +990,6 @@ nav a:hover {
     color: blue;
 }
 
-/* Alıcının ismi yeşil */
 .recipient {
     color: green;
 }
@@ -810,7 +1034,7 @@ nav a:hover {
 }
 .comments-section {
     margin-top: 15px;
-    display: none; /* Initially hidden */
+    display: none;
 }
 
 .comments-section h5 {
@@ -868,7 +1092,7 @@ small {
 }
 
 .button-l {
-  padding: 1.3em 3em;
+  padding: 0.8em 1em;
   font-size: 12px;
   text-transform: uppercase;
   letter-spacing: 2.5px;
@@ -881,8 +1105,9 @@ small {
   transition: all 0.3s ease 0s;
   cursor: pointer;
   outline: none;
-    margin-top: 15px;
     margin-bottom: 15px;
+        width: 65%;
+    margin-left: 45px;
 }
 
 .button-l:hover {
@@ -901,12 +1126,14 @@ small {
  font-size: 16px;
  position: relative;
  margin: auto;
- padding: 1em 2.5em 1em 2.5em;
+ padding: 0em 2.5em 0.4em 2.5em;
  border: none;
  background: #fff;
  transition: all 0.1s linear;
  box-shadow: 0 0.4em 1em rgba(0, 0, 0, 0.1);
     margin-top: 10px;
+width: 75%;
+    margin-left: 30px;
 }
 
 .button-item:active {

@@ -7,12 +7,15 @@
     <meta name="csrf-token" content="{{ csrf_token }}">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{% block title %}Bartini{% endblock %}</title>
+    <link rel="icon" type="image/x-icon" href="{% static 'images/favicon.ico' %}">
+
     <link rel="stylesheet" href="{% static 'home.css' %}">
 <link rel="stylesheet" href="{% static 'css/bootstrap.min.css' %}">
 <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
     <script src="{% static 'homejs.js' %}"></script>
     {% block extra_css %}{% endblock %}
 </head>
+
 <body>
 <div class="container-fluid">
     <div class="row">
@@ -26,15 +29,14 @@
             </div>
             <nav>
                 <button type="button" onclick="window.location.href='{% url 'logout' %}';" class="button-33">Log Out</button>
-                <button type="button" style="margin-right: 125px;" onclick="window.location.href='{% url 'profile' %}';" class="button-33">
+                <button type="button" style="margin-right: 45px;" onclick="window.location.href='{% url 'profile' %}';" class="button-33">
                     <div class="profile-container">
                         <div class="profile-text">Profilim</div>
-                        <div class="profile-img-l">
-    <img src="/media/{{ profile_picture }}">
-</div>
+                        
                     </div>
                 </button>
             </nav>
+        <hr>
             <div class="menu-item">
                 <button type="button" onclick="window.location.href='/home';" class="button-l">Ana Sayfa</button>
             </div>
@@ -42,12 +44,12 @@
             <div class="menu-item"><button type="button" onclick="window.location.href='{% url 'topics' %}';" class="button-l">Gündem Konular</button></div>
 
            <button class="button-33" role="button" onclick="">Populer Postlar</button>
-            <ul style="list-style-type: none; padding-left: 15px;">
+        <hr>
+            <ul style="list-style-type: none; padding-left: 0px;">
                 {% if popular_posts %}
                     {% for post in popular_posts %}
                         <li>
-                            <div class="post-content" style="margin-top: 15px">
-                                <!-- Pass the post's ID as a URL parameter -->
+                            <div class="post-content" style="">
                                 <button class="full-rounded button-item" role="button"
                                     onclick="window.location.href='{% url 'post_view' post_id=post|get_id %}'">
                                     <span>{{ post.content }}</span><div class="full-rounded"></div>
@@ -71,20 +73,30 @@
         <div class="col-12 col-md-3 sidebar">
             {% block sidebar %}
                 <button class="button-33" role="button" onclick="window.location.href='{% url 'add_group' %}';">Gruplar</button>
-                <ul style="padding-top: 15px; list-style-type: none; padding-left: 15px;">
+                <hr>
+                <ul style="list-style-type: none; padding-left: 0px;">
                     {% if groups %}
                         {% for group in groups %}
-                            <li><button class="full-rounded button-item" role="button">
-                               <span> {{ group.name }}
-                            </span><div class="full-rounded"></div>
-                            </button></li>
+                            {% if forloop.counter <= 3 %}
+                                <li>
+                                    <button class="full-rounded button-item" role="button">
+                                        <span>{{ group.name }}</span>
+                                        <div class="full-rounded"></div>
+                                    </button>
+                                </li>
+                            {% endif %}
                         {% endfor %}
                     {% else %}
-                        <li><p>Henüz grup eklenmedi.</p></li>
+                        <li>
+                            <p>Henüz grup eklenmedi.</p>
+                        </li>
                     {% endif %}
                 </ul>
+
+
                  <button class="button-33" role="button" onclick="window.location.href='{% url 'topics' %}';">Gündem Konular</button>
-                    <ul style="padding-top: 15px; list-style-type: none; padding-left: 15px;">
+                   <hr>
+                    <ul style=" list-style-type: none; padding-left: 0px;">
                         {% for topic in topics %}
                                 <li>
                                     <button class="full-rounded button-item" role="button"
@@ -100,8 +112,12 @@
 {% block group_sidebar %}{% endblock %}
 <!-- Chat Bar -->
 <div id="username" data-username="{{ username }}" style="display: none;"></div>
+        {% if not is_group_detail %}
 <button style="border-radius: 50%;" class="btn btn-primary toggle-chat-btn" onclick="toggleChat(); clearNewMessageNotification();">
-    💬 <span id="new-message-indicator" class="new-message-indicator" style="display: none;">!</span>
+   💬 <span id="new-message-indicator" class="new-message-indicator" style="display: none;">!</span>
+        {% endif %}
+
+     
 </button>
            
             <div class="chat-bar" id="chat-bar" style="display: none;">
@@ -150,7 +166,6 @@
         <p><strong>Dosya:</strong> <span id="file-name"></span></p>
         <button class="btn btn-danger btn-sm" onclick="clearFile()">Kaldır</button>
     </div>
-    <!-- İlerleme Çubuğu -->
     <div class="upload-progress-container" id="upload-progress" style="display: none;">
         <div class="progress-bar" id="progress-bar"></div>
     </div>

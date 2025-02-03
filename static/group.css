@@ -1,614 +1,124 @@
-.menu {
+body {
+    font-family: 'Arial', sans-serif;
+    background-color: #f4f7fa;
+    color: #333;
+    margin: 0;
+    padding: 0;
+}
+
+/* Başlık */
+h2, h4 {
+    font-weight: 600;
+    color: #4d4d4d;
+    text-align: center;
+}
+
+/* Form Alanları */
+.container {
+    max-width: 800px;
+    margin: 20px auto;
     background-color: #fff;
-    padding: 20px;
-    border-right: 1px solid #ddd;
-    height: 100vh;
-    position: relative;
-}
-
-
-.large-story-container {
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    background: rgba(51, 51, 51, 0.2);
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    z-index: 1000;
-}
-
-.large-story-container img {
-    max-width: 100%;
-    max-height: 100%;
-    border-radius: 10px;
-}
-
-.close-btn {
-    position: absolute;
-    top: 20px;
-    right: 30px;
-    color: white;
-    font-size: 2rem;
-    cursor: pointer;
-}
-.sidebar {
-    background-color: #f8f9fa;
-    padding: 20px;
-    border-left: 1px solid rgba(172, 172, 172, 0.67);
-}
-
-.story-container {
-    display: flex;
-    gap: 15px;
-    padding: 10px 25px;
-    overflow-x: auto;
-    scrollbar-width: none;
-    -ms-overflow-style: none;
-}
-
-.story-container::-webkit-scrollbar {
-    display: none;
-}
-
-
-.story-img {
-    height: 60px;
-    width: 60px;
-    object-fit: cover;
-    border: 2px solid #4c76e2;
-    border-radius: 50%;
-}
-
-.content {
-    padding: 20px;
-    overflow-y: hidden;
-}
-
-.post {
-    background-color: #ffffff;
-    padding: 20px;
+    padding: 30px;
     border-radius: 8px;
-    margin-bottom: 20px;
-    box-shadow: 0 2px 8px rgba(51, 51, 51, 0.2);
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
 }
 
-.create-post {
-    background-color: #ffffff;
-    padding: 15px;
-    border-radius: 8px;
+.form-group {
     margin-bottom: 20px;
-    box-shadow: 0 2px 8px rgba(51, 51, 51, 0.2);
-    display: flex;
-    flex-direction: column;
 }
 
-.create-post textarea {
+label {
+    font-size: 1.1em;
+    color: #555;
+}
+
+input[type="text"] {
     width: 100%;
-    height: 80px;
-    border: none;
-    resize: none;
     padding: 10px;
-    border-radius: 8px;
-    background-color: #ffffff;
-    margin-bottom: 10px;
-    overflow: hidden;
-    scrollbar-width: none;
-    -ms-overflow-style: none;
+    font-size: 1em;
+    border: 1px solid #ccc;
+    border-radius: 5px;
+    transition: border-color 0.3s ease;
 }
 
-.create-post textarea::-webkit-scrollbar {
-    display: none;
-}
-
-.create-post textarea:focus {
+input[type="text"]:focus {
+    border-color: #6c7dff;
     outline: none;
 }
 
-.create-post .send-btn {
-    background-color: #4c76e2;
+.send-btn {
+    background-color: #6c7dff;
+    color: white;
     border: none;
     padding: 10px 20px;
-    border-radius: 8px;
-    color: #ffffff;
-    font-weight: bold;
+    font-size: 1em;
+    border-radius: 5px;
     cursor: pointer;
-    align-self: flex-end;
-}
-
-.create-post .send-btn:hover {
-    background-color: #4c76e2;
-}
-
-nav {
-    display: flex;
-    justify-content: space-between;
-    margin-bottom: 15px;
-}
-
-nav a {
-    text-decoration: none;
-    color: rgb(255, 255, 255);
-    padding: 10px 15px;
-    background-color: #4c76e2;
-    border-radius: 28px;
     transition: background-color 0.3s ease;
-    margin-left: 15px;
 }
 
-nav a:hover {
-    background-color: #4c76e2;
+.send-btn:hover {
+    background-color: #5a66e6;
 }
 
-
-
-
-/* CSS */
-.button-60 {
-  align-items: center;
-  appearance: none;
-  background-color: rgba(172, 172, 172, 0.67);
-  border: 1px solid #dbdbdb;
-  border-radius: .375em;
-  box-shadow: none;
-  box-sizing: border-box;
-  color: #ffffff;
-  cursor: pointer;
-  display: inline-flex;
-  font-family: BlinkMacSystemFont,-apple-system,"Segoe UI",Roboto,Oxygen,Ubuntu,Cantarell,"Fira Sans","Droid Sans","Helvetica Neue",Helvetica,Arial,sans-serif;
-  font-size: 1rem;
-  height: 2.5em;
-  justify-content: center;
-  line-height: 1.5;
-  padding: calc(.5em - 1px) 1em;
-    margin-bottom: 10px;
-  position: relative;
-  text-align: center;
-  user-select: none;
-  -webkit-user-select: none;
-  touch-action: manipulation;
-  vertical-align: top;
-  white-space: nowrap;
+.send-btn:disabled {
+    background-color: #a3b0d0;
+    cursor: not-allowed;
 }
 
-.button-60:active {
-  border-color: #4a4a4a;
-  outline: 0;
-}
-
-.button-60:focus {
-  border-color: #485fc7;
-  outline: 0;
-}
-
-.button-60:hover {
-  border-color: #b5b5b5;
-}
-
-.button-60:focus:not(:active) {
-  box-shadow: rgba(72, 95, 199, .25) 0 0 0 .125em;
-}
-.button-33 {
-  background-color: rgba(76, 118, 226, 0.48);
-  border-radius: 100px;
-  box-shadow: rgba(76, 118, 226, 0.18) 0 -25px 18px -14px inset, rgba(76, 118, 226, 0.26) 0 1px 2px, rgba(76, 118, 226, 0.42) 0 2px 4px, rgba(76, 118, 226, 0.65) 0 4px 8px,rgba(44, 187, 99, .15) 0 8px 16px,rgba(44, 187, 99, .15) 0 16px 32px;
-  color: #008000;
-  cursor: pointer;
-  display: inline-block;
-  font-family: CerebriSans-Regular,-apple-system,system-ui,Roboto,sans-serif;
-  padding: 7px 20px;
-    margin-left: 7px;
-  text-align: center;
-  text-decoration: none;
-  transition: all 250ms;
-  border: 0;
-  font-size: 16px;
-  user-select: none;
-  -webkit-user-select: none;
-  touch-action: manipulation;
-}
-
-.button-33:hover {
-  box-shadow: rgba(76, 118, 226, 0.36) 0 -25px 18px -14px inset, rgba(76, 118, 226, 0.49) 0 1px 2px, rgba(76, 118, 226, 0.66) 0 2px 4px, rgb(76, 118, 226) 0 4px 8px,rgba(44,187,99,.25) 0 8px 16px,rgba(44,187,99,.25) 0 16px 32px;
-  transform: scale(1.05) rotate(-1deg);
-}
-.profile-container {
-  position: relative;
-  display: inline-block;
-}
-
-
-
-.profile-img {
-  height: 40px;
-  width: 40px;
-    margin-top: -8px;
-  background: url("https://picsum.photos/200");
-  background-size: cover;
-  background-position: center;
-  position: absolute;
-  right: -63px; /* resim metinden 50px sağda olacak */
-  top: 0; /* metinle hizalanması için */
-  border-radius: 50%;
-  box-shadow: 5px 5px 10px rgb(51, 51, 51);
-}
-.pp-img {
-  height: 40px;
-  width: 40px;
-  margin-right: 10px;
-  position: relative;
-  border-radius: 50%;
-  box-shadow: 5px 5px 10px rgb(51, 51, 51);
-  vertical-align: middle;
-}
-
-.post-header {
-  display: flex;
-  align-items: center;
-}
-
-.post-header h4 {
-  margin: 0;
-}
-
-.post p {
-  margin-top: 10px; /* İçeriği başlıktan daha aşağıya alır */
-}
-.send-btn {
-    background-color: #4c76e2;
-    border: none;
-    padding: 10px 20px;
-    border-radius: 8px;
-    color: #ffffff;
-    font-weight: bold;
-    cursor: pointer;
-    align-self: flex-end;
-    margin-top: 5px;
-}
-
-.chat-messages {
-    height: 300px;
-    overflow-y: scroll;
-    margin-bottom: 10px;
-    border: 1px solid #ccc;
-    padding: 10px;
-    background-color: #f9f9f9;
-}
-
-.chat-message {
-    margin-bottom: 5px;
-}
-
-.chat-message strong {
-    color: #007bff;
-}
-.event-item {
-    background: #f9f9f9;
-    padding: 10px;
-    border: 1px solid #ddd;
-    margin-bottom: 10px;
-    border-radius: 5px;
-}
-.event-item h4 {
-    margin: 0;
-    font-size: 18px;
-}
-.event-item p {
-    margin: 5px 0;
-}
-button {
-    background-color: #4CAF50; /* Yeşil buton rengi */
-    color: white;
-    padding: 10px 20px;
-    border: none;
-    border-radius: 5px;
-    font-size: 16px;
-    cursor: pointer;
-    transition: background-color 0.3s;
-}
-
-.chat-bar {
-    background: linear-gradient(135deg, #e6f3ff, #cce7ff);
-    border: 1px solid #b3d8ff;
-    border-radius: 10px;
-    padding: 15px;
-    width: 350px;
-    box-shadow: 0px 4px 8px rgba(0, 0, 0, 0.2);
-    font-family: 'Arial', sans-serif;
-    position: fixed;
-    top: 0;
-    right: 0;
-    height: 100%;
-    overflow-y: auto;
-    z-index: 1000;
-    transform: translateX(0);
-    transition: transform 0.3s ease-in-out;
-}
-
-.chat-bar.open {
-    transform: translateX(0);
-}
-
-.chat-header {
-    background-color: #007bff;
-    color: white;
-    text-align: center;
-    padding: 10px;
-    border-radius: 8px;
-    cursor: pointer;
-}
-
-.chat-header:hover {
-    background-color: #0056b3;
-}
-
-.friends-list {
-    background: #f8f9fa;
-    padding: 10px;
-    border-radius: 8px;
-    margin-bottom: 10px;
-    box-shadow: inset 0px 0px 5px rgba(0, 0, 0, 0.1);
-}
-
-.friends-list h3 {
-    color: #0056b3;
-    margin-bottom: 10px;
-}
-
-#friend-list li {
-    list-style: none;
-    padding: 5px;
-    cursor: pointer;
-    border-radius: 5px;
-    transition: background 0.3s;
-}
-
-#friend-list li:hover {
-    background: #007bff;
-    color: white;
-}
-
-.selected-friend-name {
-    color: #007bff;
-    font-size: 18px;
-    margin-bottom: 10px;
-}
-
-.chat-messages {
-    max-height: 250px;
-    overflow-y: auto;
-    padding: 10px;
-    background: white;
-    border: 1px solid #ccc;
-    border-radius: 8px;
-    margin-bottom: 10px;
-}
-
-.message {
-    margin-bottom: 10px;
-}
-
-.chat-input {
-    display: flex;
-    gap: 10px;
-    margin-top: 10px;
-}
-
-.send-btn {
-    flex-shrink: 0;
-}
-
-.file-upload {
-    margin-top: 10px;
-}
-
-.file-upload-container {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    padding: 10px;
-    background-color: #f0f8ff;
-    border: 2px dashed #b3d8ff;
-    border-radius: 10px;
+/* Arama Bölümü */
+#searchGroup {
     width: 100%;
-    max-width: 400px;
-    margin: 10px auto;
-    text-align: center;
-}
-
-/* Dosya Yükleme Etiketi */
-.file-upload-label {
-    cursor: pointer;
-    color: #4a90e2;
-    font-size: 18px;
-    font-weight: bold;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 10px;
-    padding: 10px 20px;
-    border: 2px solid #b3d8ff;
-    border-radius: 8px;
-    transition: all 0.3s ease-in-out;
-}
-
-.file-upload-label:hover {
-    background-color: #d9f1ff;
-    border-color: #80c1ff;
-}
-
-/* Dosya Girdisi */
-.file-upload-input {
-    display: none;
-}
-
-/* Dosya Bilgi Alanı */
-.file-info {
-    margin-top: 10px;
-    font-size: 14px;
-    color: #333;
-}
-
-/* İlerleme Çubuğu */
-.upload-progress-container {
-    margin-top: 10px;
-    width: 100%;
-    height: 20px;
-    background-color: #e6f3ff;
+    padding: 12px;
+    font-size: 1em;
     border-radius: 5px;
-    overflow: hidden;
-    position: relative;
+    border: 1px solid #ccc;
+    margin-bottom: 20px;
 }
 
-.progress-bar {
-    height: 100%;
-    background-color: #4a90e2;
-    width: 0%;
-    transition: width 0.3s ease-in-out;
+button.cta {
+    display: inline-block;
+    background-color: transparent;
+    border: none;
+    cursor: pointer;
+    font-size: 1.1em;
+    color: #4d4d4d;
+    padding: 8px 15px;
+    border-radius: 5px;
+    transition: all 0.3s ease;
 }
 
-.toggle-chat-btn {
-    position: fixed;
-    bottom: 10px;
-    right: 10px;
-    background-color: #007bff;
-    color: white;
-    border-radius: 50%;
-    width: 50px;
-    height: 50px;
-    font-size: 20px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    box-shadow: 0px 4px 6px rgba(0, 0, 0, 0.3);
-    transition: transform 0.2s ease-in-out;
-    z-index: 1001;
+button.cta:hover {
+    background-color: #e6f0ff;
 }
 
-.toggle-chat-btn:hover {
-    transform: scale(1.1);
-    background-color: #0056b3;
-}
-.button-l {
-  padding: 1.3em 3em;
-  font-size: 12px;
-  text-transform: uppercase;
-  letter-spacing: 2.5px;
-  font-weight: 500;
-  color: #000;
-  background-color: #fff;
-  border: none;
-  border-radius: 45px;
-  box-shadow: 0px 8px 15px rgba(0, 0, 0, 0.1);
-  transition: all 0.3s ease 0s;
-  cursor: pointer;
-  outline: none;
+/* Arama Sonucu Liste */
+#groupList {
     margin-top: 15px;
-    margin-bottom: 15px;
+    padding-left: 0;
+    list-style: none;
 }
 
-.button-l:hover {
-  background-color: #23c483;
-  box-shadow: 0px 15px 20px rgba(46, 229, 157, 0.4);
-  color: #fff;
-  transform: translateY(-7px);
+#groupList li {
+    margin-bottom: 10px;
 }
 
-.button-l:active {
-  transform: translateY(-1px);
+.alert-danger {
+    background-color: #f8d7da;
+    color: #721c24;
+    padding: 15px;
+    border-radius: 5px;
+    margin-top: 20px;
 }
 
+/* Responsive Tasarım */
+@media (max-width: 768px) {
+    .container {
+        padding: 20px;
+    }
 
-.button-item {
- font-size: 16px;
- position: relative;
- margin: auto;
- padding: 1em 2.5em 1em 2.5em;
- border: none;
- background: #fff;
- transition: all 0.1s linear;
- box-shadow: 0 0.4em 1em rgba(0, 0, 0, 0.1);
-    margin-top: 10px;
+    .send-btn, #searchGroup {
+        font-size: 0.9em;
+    }
 }
 
-.button-item:active {
- transform: scale(0.95);
-}
-
-.button-item span {
- color: #464646;
-}
-
-.button-item .border {
- position: absolute;
- border: 0.15em solid #fff;
- transition: all 0.3s 0.08s linear;
- top: 50%;
- left: 50%;
- width: 9em;
- height: 3em;
- transform: translate(-50%, -50%);
-}
-
-.button-item:hover .border {
- display: block;
- width: 9.9em;
- height: 3.7em;
-}
-
-.full-rounded {
- border-radius: 2em;
-}
-
-.cta {
-  border: none;
-  background: none;
-  cursor: pointer;
-}
-
-.cta span {
-  padding-bottom: 7px;
-  letter-spacing: 4px;
-  font-size: 14px;
-  padding-right: 15px;
-  text-transform: uppercase;
-}
-
-.cta svg {
-  transform: translateX(-8px);
-  transition: all 0.3s ease;
-}
-
-.cta:hover svg {
-  transform: translateX(0);
-}
-
-.cta:active svg {
-  transform: scale(0.9);
-}
-
-.hover-underline-animation {
-  position: relative;
-  color: black;
-  padding-bottom: 20px;
-}
-
-.hover-underline-animation:after {
-  content: "";
-  position: absolute;
-  width: 100%;
-  transform: scaleX(0);
-  height: 2px;
-  bottom: 0;
-  left: 0;
-  background-color: #000000;
-  transform-origin: bottom right;
-  transition: transform 0.25s ease-out;
-}
-
-.cta:hover .hover-underline-animation:after {
-  transform: scaleX(1);
-  transform-origin: bottom left;
-}

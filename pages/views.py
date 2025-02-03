@@ -1,7 +1,10 @@
 import base64
+import os
+
 from django.core.cache import cache
 from django.core.mail import EmailMessage
 from datetime import datetime,timedelta
+from flask import Flask, request, jsonify
 from channels.db import database_sync_to_async
 from django.conf import settings
 from channels.layers import get_channel_layer
@@ -23,12 +26,9 @@ from django.contrib.auth import logout as auth_logout
 from django.http import JsonResponse
 from django.contrib import messages
 from django.template.loader import render_to_string
-from django.contrib.sites.shortcuts import get_current_site
-from django.core.mail import send_mail
-import hashlib
 import uuid
-
-MONGO_URI = 'mongodb+srv://batuhanfahri06:PezQB4OKaTHSEjFm@bartini.qyrro.mongodb.net/<database>?retryWrites=true&w=majority&readPreference=secondaryPreferred'
+MONGO_URI = 'mongodb://localhost:27017/my_database'
+# MONGO_URI = 'mongodb+srv://batuhanfahri06:PezQB4OKaTHSEjFm@bartini.qyrro.mongodb.net/<database>?retryWrites=true&w=majority&readPreference=secondaryPreferred'
 DATABASE_NAME = 'my_database'
 USER_COLLECTION = 'users'
 POST_COLLECTION = 'posts'
@@ -38,13 +38,21 @@ TOPIC_COMMENT_COLLECTION = 'topic_comments'
 COMMENT_COLLECTION = 'comments'
 JOIN_REQUEST_COLLECTION = 'join_request'
 FRIEND_REQUEST_COLLECTION = 'friend_requests'
+STORY_COLLECTION = 'stories'
+
 client = MongoClient(MONGO_URI)
 db = client[DATABASE_NAME]
 messages_collection = db['messages']
 MEMBERSHIP_REQUEST_COLLECTION = 'membership_requests'
+story_collection = db['stories']
 
+app = Flask(__name__)
+@csrf_exempt
 def index(request):
     return render(request, "index.html")
+def privacy_policy(request):
+    return render(request, "kvkk.html")
+@csrf_exempt
 def signup(request):
     return render(request, "sign_up.html")
 def post_view(request, post_id):
@@ -58,9 +66,8 @@ def post_view(request, post_id):
     popular_posts = list(popular_posts)
     print(post)
     if post:
-        post['_id'] = str(post['_id'])  # Convert _id to string for template usage
+        post['_id'] = str(post['_id'])
 
-        # Add the profile picture to the post
         post_user = db[USER_COLLECTION].find_one({'username': post.get('username')})
         post['profile_picture'] = post_user.get('profile_picture', 'default.png') if post_user else 'default.png'
         context = get_common_context(username, db)
@@ -79,103 +86,99 @@ def post_view(request, post_id):
 def chat_rooms(request):
     client = MongoClient(MONGO_URI)
     db = client[DATABASE_NAME]
-    username = request.session.get('username')  # Retrieve the username from the session
+    username = request.session.get('username')
     context = get_common_context(username, db)
 
     context.update({
         'rooms': range(1, 11),
-        'username': username  # Pass the username to the template
+        'username': username
     })
 
     return render(request, "chat_rooms.html", context)
 def get_static_context(db):
-    # Cache kontrolü (örneğin 10 dakika süreyle saklanır)
     cached_context = cache.get('static_context')
     if cached_context:
         return cached_context
 
-    # Sık değişmeyen veriler
     group_collection = db[GROUP_COLLECTION]
     groups = list(group_collection.find())
     topics = list(db[TOPIC_COLLECTION].find().sort('like', DESCENDING).limit(3))
     for topic in topics:
         topic['_id'] = str(topic['_id'])
 
-    # Cache kaydet
     static_context = {
         'groups': groups,
         'topics': topics,
     }
-    cache.set('static_context', static_context, timeout=600)  # 10 dakika
+    cache.set('static_context', static_context, timeout=600)
     return static_context
 def home(request):
     client = MongoClient(MONGO_URI)
     db = client[DATABASE_NAME]
+
     username = request.session.get('username')
     user_collection = db[USER_COLLECTION]
     post_collection = db[POST_COLLECTION]
-    # Mevcut kullanıcı bilgisi
+    group_collection = db[GROUP_COLLECTION]
+
     current_user = user_collection.find_one({'username': username})
+    friends = get_friends(current_user) if current_user else []
     profile_picture = current_user.get('profile_picture', 'default.png') if current_user else 'default.png'
-    # Kullanıcıları topluca çekme (Profil fotoğrafları için)
-    users = {user['username']: user for user in user_collection.find()}
-    # Gönderiler
-    posts = post_collection.find().sort("created_at", DESCENDING).limit(10)  # İlk 10 gönderi
-    popular_posts = post_collection.find().sort("likes", DESCENDING).limit(3)  # Popüler gönderiler
 
-    # Gönderileri profil fotoğraflarıyla eşleştirme
-    def attach_profile_picture(post):
+    posts = post_collection.find().sort("created_at", -1)
+    posts_with_pictures = []
+    for post in posts:
         post['_id'] = str(post['_id'])
-        post_user = users.get(post['username'])
+        post_user = user_collection.find_one({'username': post['username']})
         post['profile_picture'] = post_user.get('profile_picture', 'default.png') if post_user else 'default.png'
-        return post
+        posts_with_pictures.append(post)
 
-    posts_with_pictures = [attach_profile_picture(post) for post in posts]
-    popular_posts = [attach_profile_picture(post) for post in popular_posts]
+    # Popüler gönderiler
+    popular_posts = post_collection.find().sort("likes", -1).limit(3)
+    popular_posts = list(popular_posts)
+    for post in popular_posts:
+        post['_id'] = str(post['_id'])
 
-    # Ortak context
+    # Gruplar ve konular
+    groups = group_collection.find()
+    topics = db[TOPIC_COLLECTION].find().sort('like', -1).limit(3)
+    topics = list(topics)
+    for topic in topics:
+        topic['_id'] = str(topic['_id'])
+        context = get_common_context(username, db)
     context = get_common_context(username, db)
-    context.update(get_static_context(db))
-    context.update({
-        'posts': posts_with_pictures,
-        'popular_posts': popular_posts,
-    })
-
     return render(request, 'home_page.html', context)
 def get_common_context(username, db):
     user_collection = db[USER_COLLECTION]
     post_collection = db[POST_COLLECTION]
     group_collection = db[GROUP_COLLECTION]
     topic_collection = db[TOPIC_COLLECTION]
-
-    # 1. Mevcut kullanıcı bilgisi
+    user = user_collection.find_one({"username": username})
+    stories = list(story_collection.find({}, {'_id': 0}))
     current_user = user_collection.find_one({'username': username})
     friends = get_friends(current_user) if current_user else []
     profile_picture = current_user.get('profile_picture', 'default.png') if current_user else 'default.png'
+    pp = user_collection.find_one({"profile_picture": user['profile_picture']})
 
-    # 2. Gönderiler ve kullanıcı verileri
     posts = list(post_collection.find().sort("created_at", -1))
-    user_usernames = {post['username'] for post in posts}  # Tüm kullanıcı adlarını topla
+    user_usernames = {post['username'] for post in posts}
     users = {user['username']: user for user in user_collection.find({'username': {'$in': list(user_usernames)}})}
 
-    # Gönderilere kullanıcı bilgisi ekle
+
     for post in posts:
-        post['_id'] = str(post['_id'])  # _id'yi stringe çevir
+        post['_id'] = str(post['_id'])
         user = users.get(post['username'])
         post['profile_picture'] = user.get('profile_picture', 'default.png') if user else 'default.png'
 
-    # 3. Popüler gönderiler
     popular_posts = list(post_collection.find().sort("likes", -1).limit(3))
     for post in popular_posts:
         post['_id'] = str(post['_id'])
 
-    # 4. Gruplar ve konular
     groups = list(group_collection.find())
     topics = list(topic_collection.find().sort('like', -1).limit(3))
     for topic in topics:
         topic['_id'] = str(topic['_id'])
 
-    # Bağlamı döndür
     return {
         'posts': posts,
         'groups': groups,
@@ -185,6 +188,9 @@ def get_common_context(username, db):
         'popular_posts': popular_posts,
         'profile_picture': profile_picture,
         'username': username,
+        'pp':pp,
+        'stories':stories,
+
     }
 def topic(request):
     username = request.session.get('username')
@@ -201,7 +207,6 @@ def get_topics(request):
             if not topics:
                 return JsonResponse({'error': 'No topics found.'}, status=404)
 
-            # Konuları düzenle
             for topic in topics:
                 topic['_id'] = str(topic['_id'])
                 topic['likes_count'] = topic.get('like', 0)
@@ -213,9 +218,9 @@ def get_topics(request):
         except Exception as e:
             return JsonResponse({'error': str(e)}, status=400)
 def list_topics(request):
-    topics = db[TOPIC_COLLECTION].find().sort('like', -1).limit(3)  # Like'a göre azalan sırala ve ilk 3 konuyu al
+    topics = db[TOPIC_COLLECTION].find().sort('like', -1).limit(3)
     for topic in topics:
-        topic['_id'] = str(topic['_id'])  # JSON uyumu için ID'yi stringe çevir
+        topic['_id'] = str(topic['_id'])
     return render(request, 'topics.html', {'topics': topics})
 @csrf_exempt
 def create_topic(request):
@@ -263,7 +268,6 @@ def add_comment_topic(request):
             if not topic_id or not comment_text:
                 return JsonResponse({'error': 'Topic ID and comment text are required.'}, status=400)
 
-            # Yeni yorum oluştur
             new_comment = {
                 'topic_id': ObjectId(topic_id),
                 'comment_text': comment_text,
@@ -271,10 +275,8 @@ def add_comment_topic(request):
                 'commenter': commenter
             }
 
-            # MongoDB'ye yeni yorumu ekle
             db['topic_comments'].insert_one(new_comment)
 
-            # Konunun comment_count'ını artır
             db['topics'].update_one(
                 {'_id': ObjectId(topic_id)},
                 {'$inc': {'comment_count': 1}}
@@ -308,12 +310,10 @@ def like_topic(request, topic_id):
 
             user_likes = topic.get('user_likes', {})
 
-            # Eğer kullanıcı zaten "liked" ise, beğeniyi kaldır
             if user_likes.get(username) == 'liked':
                 likes = topic.get('like', 0) - 1
-                user_likes.pop(username)  # Kullanıcının beğenisini kaldır
+                user_likes.pop(username)
             else:
-                # Kullanıcı zaten "disliked" yapmışsa, beğenmeyi kaldır
                 dislikes = topic.get('dislike', 0)
                 if user_likes.get(username) == 'disliked':
                     dislikes -= 1
@@ -349,12 +349,10 @@ def dislike_topic(request, topic_id):
 
             user_likes = topic.get('user_likes', {})
 
-            # Eğer kullanıcı zaten "disliked" ise, beğenmeme işlemini kaldır
             if user_likes.get(username) == 'disliked':
                 dislikes = topic.get('dislike', 0) - 1
-                user_likes.pop(username)  # Kullanıcının beğenmeme durumunu kaldır
+                user_likes.pop(username)
             else:
-                # Kullanıcı zaten "liked" yapmışsa, beğeniyi kaldır
                 likes = topic.get('like', 0)
                 if user_likes.get(username) == 'liked':
                     likes -= 1
@@ -381,7 +379,6 @@ def verify_email(request, token):
     user = user_collection.find_one({"verification_token": token})
 
     if user:
-        # Kullanıcıyı doğrulama başarılı
         user_collection.update_one(
             {"_id": user["_id"]},
             {"$set": {"is_verified": True}},
@@ -391,6 +388,7 @@ def verify_email(request, token):
     else:
         error_message = "Geçersiz doğrulama bağlantısı!"
         return render(request, 'sign_up.html', {'error_message': error_message})
+@csrf_exempt
 def register(request):
     if request.method == 'POST':
         email = request.POST.get('email')
@@ -408,16 +406,16 @@ def register(request):
 
         ip_address = get_client_ip(request)
 
-        if save_to_mongo(email, username, password, ip_address):
+        if save_to_mongo(email, username, password, ip_address, is_banned=False):
             success_message = "Kayıt işlemi başarılı! Lütfen e-posta adresinizi doğrulayın."
 
-            token = str(uuid.uuid4())  # Benzersiz token
+            token = str(uuid.uuid4())
             user_collection.update_one(
                 {"email": email},
                 {"$set": {"verification_token": token}}
             )
 
-            verification_link = f"https://bartini.online/verify/{token}"
+            verification_link = f"http://localhost:8000/verify/{token}"
 
             subject = "E-posta Doğrulaması"
 
@@ -441,6 +439,7 @@ def register(request):
             return render(request, 'sign_up.html', {'error_message': error_message})
 
     return render(request, 'sign_up.html')
+@csrf_exempt
 def login(request):
     if request.method == 'POST':
         username = request.POST.get('username')
@@ -453,7 +452,15 @@ def login(request):
 
             user = collection.find_one({"username": username})
 
-            if user and bcrypt.checkpw(password, user['password']):
+            if user:
+                if user.get('is_banned', False):
+                    error_message = "Hesabınız yasaklanmış. Lütfen destek ekibiyle iletişime geçin."
+                    return render(request, 'index.html', {'error_message': error_message})
+
+                if not bcrypt.checkpw(password, user['password']):
+                    error_message = "Kullanıcı adı veya şifre yanlış!"
+                    return render(request, 'index.html', {'error_message': error_message})
+
                 if not user.get('is_verified', False):
                     error_message = "Hesabınızı doğrulamadınız. Lütfen e-posta adresinizi kontrol edin."
                     return render(request, 'index.html', {'error_message': error_message})
@@ -479,7 +486,7 @@ def get_client_ip(request):
     else:
         ip = request.META.get('REMOTE_ADDR')
     return ip
-def save_to_mongo(email, username, password, ip_address):
+def save_to_mongo(email, username, password, ip_address, is_banned=False):
     try:
         client = MongoClient(MONGO_URI)
         client.server_info()
@@ -496,10 +503,15 @@ def save_to_mongo(email, username, password, ip_address):
             "friends": [],
             "profile_picture": default_profile_picture,
             "ip_address": ip_address,
-            'created_at': datetime.now()
+            "is_banned": is_banned,
+            'created_at': datetime.now(),
         }
 
         result = collection.insert_one(user_data)
+        collection.update_one(
+            {"_id": result.inserted_id},
+            {"$set": {"id": result.inserted_id}}
+        )
         return result.acknowledged
 
     except ConnectionFailure as e:
@@ -512,12 +524,10 @@ def upload_profile_picture(request):
     if request.method == 'POST' and request.FILES['profile_picture']:
         profile_picture = request.FILES['profile_picture']
 
-        # Save the image to the media directory using Django's FileSystemStorage
         fs = FileSystemStorage(location=settings.MEDIA_ROOT)
         filename = fs.save(profile_picture.name, profile_picture)
-        file_url = filename  # Save only the relative path
+        file_url = filename
 
-        # Get the logged-in user
         username = request.session.get('username')
 
         if username:
@@ -525,22 +535,19 @@ def upload_profile_picture(request):
             db = client[DATABASE_NAME]
             user_collection = db[USER_COLLECTION]
 
-            # Update the user's profile_picture field in MongoDB
             user_collection.update_one(
                 {"username": username},
-                {"$set": {"profile_picture": file_url}}  # Store relative file path, not full URL
+                {"$set": {"profile_picture": file_url}}
             )
 
-        return redirect('profile')  # Redirect to the profile page after upload
+        return redirect('profile')
     else:
         return redirect('profile')
 def get_friends(user):
     client = MongoClient(MONGO_URI)
     db = client[DATABASE_NAME]
     user_collection = db[USER_COLLECTION]
-    # Kullanıcının arkadaş listesini al
     friends_usernames = user.get('friends', [])
-    # Arkadaşların kullanıcı bilgilerini veritabanından al
     return list(user_collection.find({'username': {'$in': friends_usernames}}))
 def save_post_to_mongo(username, post_content, file_urls):
     post = {
@@ -582,6 +589,85 @@ def add_post(request):
             return JsonResponse({'success': False, 'error_message': 'Post kaydedilemedi.'})
 
     return JsonResponse({'success': False, 'error_message': 'Geçersiz istek.'})
+@csrf_exempt
+def add_story(request):
+    if request.method == 'POST':
+        files = request.FILES.getlist('story_files')
+
+        username = request.user.username if request.user.is_authenticated else request.session.get('username', 'guest')
+
+        if username == 'guest':
+            return JsonResponse({'success': False, 'error': 'Kullanıcı oturumu bulunamadı.'})
+
+        story_folder = os.path.join(settings.MEDIA_ROOT, 'stories')
+        os.makedirs(story_folder, exist_ok=True)
+
+        file_urls = []
+        for file in files:
+            original_filename = file.name
+            file_extension = os.path.splitext(original_filename)[1]
+            unique_filename = f"{uuid.uuid4().hex}{file_extension}"
+            file_path = os.path.join(story_folder, unique_filename)
+
+            with open(file_path, 'wb+') as destination:
+                for chunk in file.chunks():
+                    destination.write(chunk)
+
+            file_url = f'{settings.MEDIA_URL}stories/{unique_filename}'
+            file_urls.append(file_url)
+
+        existing_story = db['stories'].find_one({'username': username})
+        if existing_story:
+            db['stories'].update_one(
+                {'username': username},
+                {'$addToSet': {'file_url': {'$each': file_urls}}}
+            )
+        else:
+            db['stories'].insert_one({'username': username, 'file_url': file_urls})
+
+        return JsonResponse({'success': True, 'stories': [{'file_url': url} for url in file_urls]})
+
+    return JsonResponse({'success': False, 'error': 'Geçersiz istek'})
+@csrf_exempt
+def get_stories(request):
+    try:
+        user_collection = db[USER_COLLECTION]
+
+        stories = list(story_collection.find({}, {'_id': 0}))
+        username = request.session.get('username')
+        user = user_collection.find_one({"username": username})
+        grouped_stories = {}
+        for story in stories:
+            username = story.get('username', 'unknown')
+            file_urls = story.get('file_url', [])
+
+            if username not in grouped_stories:
+                grouped_stories[username] = []
+
+            grouped_stories[username].extend(file_urls)
+
+        result = [{'username': username, 'file_urls': file_urls} for username, file_urls in grouped_stories.items()]
+
+        return JsonResponse({'success': True, 'stories': result,
+
+                             })
+
+    except Exception as e:
+        return JsonResponse({'success': False, 'error': str(e)})
+def save_story_to_mongo(username, file_urls):
+    story_collection = db[STORY_COLLECTION]
+
+    try:
+        story = {
+            'username': username,
+            'file_urls': file_urls,
+            'created_at': datetime.now()
+        }
+        story_collection.insert_one(story)
+        return True
+    except Exception as e:
+        print(f"Hata: {e}")
+        return False
 def add_comment(request):
     if request.method == 'POST':
         data = json.loads(request.body)
@@ -613,7 +699,6 @@ def like_post(request):
         post = db['posts'].find_one({'_id': ObjectId(post_id)})
 
         if post:
-            # Eğer kullanıcı zaten beğendiyse, beğeniyi geri çek
             if username in post.get('liked_by', []):
                 db['posts'].update_one(
                     {'_id': ObjectId(post_id)},
@@ -621,7 +706,6 @@ def like_post(request):
                 )
                 return JsonResponse({'success': True, 'likes': post['likes'] - 1, 'liked': False})
             else:
-                # Kullanıcı beğeniyi ekler
                 db['posts'].update_one(
                     {'_id': ObjectId(post_id)},
                     {'$inc': {'likes': 1}, '$push': {'liked_by': username}}
@@ -636,12 +720,9 @@ def logout(request):
     return redirect('/')
 def profile_view(request):
     username = request.session.get('username')
-
     if username:
         client = MongoClient(MONGO_URI)
         db = client[DATABASE_NAME]
-
-        # MongoDB collections
         user_collection = db[USER_COLLECTION]
         post_collection = db[POST_COLLECTION]
         group_collection = db[GROUP_COLLECTION]
@@ -652,80 +733,50 @@ def profile_view(request):
         friend_request_collection = db[FRIEND_REQUEST_COLLECTION]
         messages_collection = db['messages']
         membership_request_collection = db['membership_requests']
-
-        # Get user details
         user = user_collection.find_one({"username": username})
         pp = user_collection.find_one({"profile_picture": user['profile_picture']})
         current_user = user_collection.find_one({'username': username})
+        story_collection = db[STORY_COLLECTION]
+
         profile_picture = current_user.get('profile_picture', 'default.png') if current_user else 'default.png'
         if not user:
             error_message = "Kullanıcı bulunamadı."
             return render(request, 'profile.html', {'error_message': error_message})
-
-        # Get groups, posts, etc.
         groups = group_collection.find()
         posts = post_collection.find().sort("created_at", -1)
         requests = list(friend_request_collection.find({'to_user': username, 'status': 'pending'}))
         friends = get_friends(user)
-
         reqqq = friend_request_collection.find_one({}, {"_id": 1})
         if reqqq:
             reqqq = str(reqqq['_id'])
-
         if request.method == 'POST':
             new_username = request.POST.get('new_username')
             if new_username:
-                # Check if the new username already exists
                 if user_collection.find_one({"username": new_username}):
                     messages.error(request, 'Bu isim zaten alınmış.')
                     return redirect('/profile')
-
-                # Update username in all relevant collections
                 user_collection.update_one({'_id': user['_id']}, {'$set': {'username': new_username}})
-
-                # Update 'friends' in the current user's document
                 user_collection.update_one(
                     {'_id': user['_id']},
                     {'$set': {
                         'friends': [new_username if friend == username else friend for friend in user['friends']]}}
                 )
-
-                # Update username in posts
                 post_collection.update_many({'username': username}, {'$set': {'username': new_username}})
-
-                # Update username in groups
+                story_collection.update_many({'username':username}, {'$set': {'username': new_username}})
                 group_collection.update_many({'owner': username}, {'$set': {'owner': new_username}})
-
-                # Update username in topics
-                topic_collection.update_many({'author': username}, {'$set': {'author': new_username}})
-
-                # Update username in topic comments
+                topic_collection.update_many({'username': username}, {'$set': {'username': new_username}})
                 topic_comment_collection.update_many({'author': username}, {'$set': {'author': new_username}})
-
-                # Update username in comments
                 comment_collection.update_many({'author': username}, {'$set': {'author': new_username}})
-
-                # Update username in join requests
                 join_request_collection.update_many({'username': username}, {'$set': {'username': new_username}})
-
-                # Update username in friend requests
                 friend_request_collection.update_many({'from_user': username}, {'$set': {'from_user': new_username}})
                 friend_request_collection.update_many({'to_user': username}, {'$set': {'to_user': new_username}})
-
-                # Update username in messages
                 messages_collection.update_many({'sender': username}, {'$set': {'sender': new_username}})
                 messages_collection.update_many({'recipient': username}, {'$set': {'recipient': new_username}})
-
-                # Update username in membership requests
                 membership_request_collection.update_many({'username': username}, {'$set': {'username': new_username}})
-
-                # Update 'friends' in all other users' documents
                 user_collection.update_many(
                     {'friends': username},
                     {'$set': {'friends.$': new_username}}
                 )
-
-                # Update session with the new username
                 request.session['username'] = new_username
                 messages.success(request, 'İsim başarıyla değiştirildi.')
                 return redirect('/profile')
@@ -751,15 +802,12 @@ def profile_view(request):
 @csrf_exempt
 def delete_account(request):
     if request.method == 'POST':
-        # Get the current user's username from the session
         username = request.session.get('username')
 
         if username:
-            # Connect to MongoDB
             client = MongoClient(MONGO_URI)
             db = client[DATABASE_NAME]
 
-            # Define collections
             user_collection = db[USER_COLLECTION]
             post_collection = db[POST_COLLECTION]
             group_collection = db[GROUP_COLLECTION]
@@ -770,31 +818,24 @@ def delete_account(request):
             messages_collection = db['messages']
             membership_request_collection = db[MEMBERSHIP_REQUEST_COLLECTION]
 
-            # Delete user from the users collection
             user_collection.delete_one({"username": username})
 
-            # Delete posts related to the user
             post_collection.delete_many({"username": username})
 
-            # Delete the user's groups
             group_collection.delete_many({"owner": username})
 
-            # Delete topics, comments, and replies by the user
             topic_collection.delete_many({"username": username})
             comment_collection.delete_many({"username": username})
             comment_collection.delete_many({"replied_to": username})
 
-            # Delete join requests, friend requests, and membership requests
             join_request_collection.delete_many({"username": username})
             friend_request_collection.delete_many({"from_user": username})
             friend_request_collection.delete_many({"to_user": username})
             membership_request_collection.delete_many({"username": username})
 
-            # Delete messages related to the user
             messages_collection.delete_many({"from_user": username})
             messages_collection.delete_many({"to_user": username})
 
-            # End the session after deletion
             request.session.flush()
 
             return JsonResponse({"status": "success"}, status=200)
@@ -805,18 +846,15 @@ def delete_account(request):
 @csrf_exempt
 def delete_post(request):
     if request.method == 'POST':
-        # JSON verisini al
         post_data = json.loads(request.body)
         post_id = post_data.get('post_id')
 
         if post_id:
             try:
-                # MongoDB bağlantısı
                 client = MongoClient(MONGO_URI)
                 db = client[DATABASE_NAME]
                 post_collection = db[POST_COLLECTION]
 
-                # Postu sil
                 result = post_collection.delete_one({"_id": ObjectId(post_id)})
 
                 if result.deleted_count == 1:
@@ -842,12 +880,10 @@ def remove_friend(request):
                 user_collection = db[USER_COLLECTION]
                 friend_request_collection = db[FRIEND_REQUEST_COLLECTION]
 
-                # Kullanıcı ve arkadaşı bul
                 user = user_collection.find_one({"username": username})
                 friend = user_collection.find_one({"username": friend_username})
 
                 if user and friend:
-                    # Arkadaş listelerini güncelle
                     user_collection.update_one(
                         {"username": username},
                         {"$pull": {"friends": friend_username}}
@@ -857,7 +893,6 @@ def remove_friend(request):
                         {"$pull": {"friends": username}}
                     )
 
-                    # Arkadaşlık isteğini sil
                     friend_request_collection.delete_one({
                         "$or": [
                             {"from_user": username, "to_user": friend_username},
@@ -961,14 +996,12 @@ def search_friends(request):
 
         posts_with_pictures = []
         for post in posts:
-            post['_id'] = str(post['_id'])  # MongoDB _id'yi stringe çevir
+            post['_id'] = str(post['_id'])
             post_user = user_collection.find_one({'username': post['username']})
             post['profile_picture'] = post_user.get('profile_picture', 'default.png') if post_user else 'default.png'
             posts_with_pictures.append(post)
-        # Arama sonuçları
         results = list(collection.find({"username": {"$regex": search_query, "$options": "i"}}))
 
-        # Her kullanıcı için friend request durumunu alalım
         for result in results:
             reqqq = friend_request_collection.find_one(
                 {
@@ -980,7 +1013,7 @@ def search_friends(request):
                 {"status": 1},
                 sort=[("_id", DESCENDING)]
             )
-            result['friend_request_status'] = reqqq  # Durumu ekliyoruz
+            result['friend_request_status'] = reqqq
             username = request.session.get('username')
             pp = user_collection.find_one({"profile_picture": user['profile_picture']})
             current_user = user_collection.find_one({'username': username})
@@ -995,8 +1028,6 @@ def search_friends(request):
             'user': user,
             'groups': groups,
             'email': user['email'],
-            'profile_picture': profile_picture,
-            'pp': pp,
             'requests': requests,
         })
         return render(request, 'profile.html', context)
@@ -1015,7 +1046,6 @@ def add_group(request):
         if not group_name or not username:
             return render(request, 'add_group.html', {'error_message': 'Grup adı veya kullanıcı bilgisi eksik.'})
 
-        # Grup adı benzersizlik kontrolü
         existing_group = group_collection.find_one({'name': group_name})
         if existing_group:
             groups = group_collection.find()
@@ -1048,14 +1078,11 @@ def group_detail(request, group_id):
     group = group_collection.find_one({'_id': ObjectId(group_id)})
     req_col = db[MEMBERSHIP_REQUEST_COLLECTION]
     username = request.session.get('username')
-    req= req_col.find_one({'group_id': group_id, 'status': 'pending' ,'username': username} )
+    req = req_col.find_one({'group_id': group_id, 'status': 'pending', 'username': username})
 
     group_id_str = str(group['_id'])
 
-
-
     user_username = username if username else 'Guest'
-    username = request.session.get('username')
     context = get_common_context(username, db)
     context.update({
         'group': {
@@ -1066,49 +1093,43 @@ def group_detail(request, group_id):
         },
         'group_id_str': group_id_str,
         'user_username': user_username,
-        'req_col': req
+        'req_col': req,
+        'is_group_detail': True
     })
     return render(request, 'group_detail.html', context)
+
 events_collection = db['events']
 def create_event(request):
     if request.method == "POST":
         try:
-            # JSON verisini al
             data = json.loads(request.body)
             event_name = data.get('event_name')
-            event_duration = int(data.get('event_duration'))  # Etkinlik süresi (örneğin 5 saat)
+            event_duration = int(data.get('event_duration'))
             group_id = data.get('group_id')
 
-            # Kullanıcı bilgilerini session'dan al
-            user_username = request.session.get('username')  # Kullanıcının oturumdaki adı
+            user_username = request.session.get('username')
 
             if not user_username:
                 return JsonResponse({"success": False, "error": "Kullanıcı bilgisi bulunamadı."})
 
-            # UTC zamanı al
             utc_now = datetime.utcnow().replace(tzinfo=pytz.utc)
 
-            # Kullanıcı zaman dilimini al (örneğin, "Europe/Istanbul")
             tz = pytz.timezone('Europe/Istanbul')
 
-            # UTC zamanı Istanbul saat dilimine çevir
             current_time = utc_now.astimezone(tz)
 
-            # Başlangıç saati: şu anki zaman - 3 saat
             start_time = current_time - timedelta(hours=-3)
 
-            # Bitiş saati: başlangıç + etkinlik süresi
             end_time = start_time + timedelta(hours=event_duration)
 
-            # Etkinliği MongoDB'ye kaydet
             events_collection.insert_one({
                 "event_name": event_name,
                 "event_duration": event_duration,
-                "start_time": start_time,  # Başlangıç saati (UTC olarak kaydedilecek)
-                "end_time": end_time,  # Bitiş saati (UTC olarak kaydedilecek)
+                "start_time": start_time,
+                "end_time": end_time,
                 "group_id": group_id,
                 "created_by": user_username,
-                "created_at": utc_now  # Etkinlik oluşturulma saati (UTC)
+                "created_at": utc_now
             })
 
             return JsonResponse({
@@ -1125,9 +1146,8 @@ def create_event(request):
 def get_events(request):
     group_id = request.GET.get('group_id')
     if group_id:
-        # Süresi dolmuş etkinlikleri sil
         utc_now = datetime.utcnow().replace(tzinfo=pytz.utc)
-        events_collection.delete_many({"end_time": {"$lt": utc_now}})  # Bitiş zamanı geçmiş etkinlikleri sil
+        events_collection.delete_many({"end_time": {"$lt": utc_now}})
 
         events = events_collection.find({"group_id": group_id})
 
@@ -1136,7 +1156,6 @@ def get_events(request):
             start_time_local = None
             end_time_local = None
 
-            # "start_time" ve "end_time" verilerini kontrol et
             if "start_time" in event:
                 tz = pytz.timezone('Europe/Istanbul')
                 start_time_local = event["start_time"].astimezone(tz)
@@ -1260,7 +1279,6 @@ def remove_member(request, group_id):
         db = client[DATABASE_NAME]
         group_collection = db[GROUP_COLLECTION]
 
-        # Grup bilgilerini al
         group = group_collection.find_one({'_id': ObjectId(group_id)})
         if not group:
             return JsonResponse({'error': 'Grup bulunamadı.'}, status=404)
@@ -1268,18 +1286,16 @@ def remove_member(request, group_id):
         username = request.POST.get('username')
         current_user = request.session.get('username')
 
-        # Kullanıcı kontrolü
         if group['owner'] != current_user:
             return JsonResponse({'error': 'Yalnızca grup sahibi üye çıkarabilir.'}, status=403)
 
         if username == group['owner']:
             return JsonResponse({'error': 'Grup sahibi gruptan çıkarılamaz.'}, status=400)
 
-        # Üye grupta mı kontrol et
         if username in group['members']:
             group_collection.update_one(
                 {'_id': ObjectId(group_id)},
-                {'$pull': {'members': username}}  # Üyeyi gruptan çıkar
+                {'$pull': {'members': username}}
             )
             return JsonResponse({'success': True})
         else:
@@ -1302,10 +1318,9 @@ def get_membership_requests(request, group_id):
 
     return JsonResponse({'pending_requests': requests_data})
 def check_new_messages(request):
-    user = request.session.get('username')  # Get the username from the session
+    user = request.session.get('username')
     if user:
         try:
-            # Correct query using count_documents() instead of count
             new_messages = db.messages.count_documents({"recipient": user, "read": False}) > 0
             return JsonResponse({'new_message': new_messages})
         except Exception as e:
@@ -1471,10 +1486,10 @@ def fetch_group_messages(request):
         query['timestamp'] = {'$gt': last_timestamp}
 
     start_time = time.time()
-    timeout_duration = 10  # Timeout duration of 10 seconds
+    timeout_duration = 10
 
     while True:
-        messages = list(messages_collection.find(query).sort('timestamp', 1))  # MongoDB query
+        messages = list(messages_collection.find(query).sort('timestamp', 1))
 
         if messages:
             formatted_messages = [
@@ -1484,7 +1499,7 @@ def fetch_group_messages(request):
             return JsonResponse({'messages': formatted_messages})
 
         if time.time() - start_time > timeout_duration:
-            return JsonResponse({'messages': []})  # Return empty if no new messages within the timeout
+            return JsonResponse({'messages': []})
 
         time.sleep(1)
 @csrf_exempt
@@ -1496,7 +1511,6 @@ def send_group_message(request):
         user = request.session.get('username')
 
         if user:
-            # Save the message to MongoDB
             messages_collection.insert_one({
                 'group_id': group_id,
                 'sender': user,

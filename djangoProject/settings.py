@@ -12,15 +12,19 @@ https://docs.djangoproject.com/en/5.1/ref/settings/
 
 from pathlib import Path
 import os
+from mongoengine import connect
+
 os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'djangoProject.settings')
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
-MONGO_URI = 'mongodb+srv://batuhanfahri06:PezQB4OKaTHSEjFm@bartini.qyrro.mongodb.net/?retryWrites=true&w=majority&appName=bartini'
+#MONGO_URI = 'mongodb+srv://batuhanfahri06:PezQB4OKaTHSEjFm@bartini.qyrro.mongodb.net/?retryWrites=true&w=majority&appName=bartini'
+MONGO_URI = 'mongodb://localhost:27017/my_database'
 DATABASE_NAME = 'my_database'
 POST_COLLECTION = 'posts'
 MEDIA_URL = '/media/'
 PPS_URL = '/pps/'
 PPS_ROOT = os.path.join(BASE_DIR, 'pps')
+connect(DATABASE_NAME, host=MONGO_URI)
 
 MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
 # Quick-start development settings - unsuitable for production
@@ -53,7 +57,7 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
     'pages.apps.PagesConfig',
-    'django.contrib.sites',
+    #'django.contrib.sites',
     'channels',
     'corsheaders',
 ]
@@ -61,12 +65,12 @@ INSTALLED_APPS = [
 ASGI_APPLICATION = 'djangoProject.asgi.application'
 CHANNEL_LAYERS = {
     "default": {
-        "BACKEND": "channels_redis.core.RedisChannelLayer",  # "channels_redis.pubsub.RedisPubSubChannelLayer" yerine
+        "BACKEND": "channels_redis.core.RedisChannelLayer",
         "CONFIG": {
             "hosts": [
                 {
                     "address": "rediss://red-ct91um68ii6s73fp9ddg:4JyDdzXWTyZkxKmhgtKAkSfTS4JRD05V@oregon-redis.render.com:6379",  # Rediss bağlantı adresiniz
-                    "ssl_cert_reqs": None,  # SSL sertifikası gereksizse None yapılabilir
+                    "ssl_cert_reqs": None,
                 }
             ],
         },
@@ -114,10 +118,26 @@ WSGI_APPLICATION = 'djangoProject.wsgi.application'
 
 DATABASES = {
     'default': {
-        'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': BASE_DIR / 'db.sqlite3',
+        'ENGINE': 'djongo',
+        'NAME': 'my_database',
+        'CLIENT': {
+            'host': 'localhost',
+            'port': 27017,
+        }
     }
 }
+
+#DATABASES = {
+#    'default': {
+#        'ENGINE': 'djongo',
+#        'NAME': 'my_database',
+#        'CLIENT': {
+#            'host': 'mongodb+srv://batuhanfahri06:PezQB4OKaTHSEjFm@bartini.qyrro.mongodb.net/<database>?retryWrites=true&w=majority&readPreference=secondaryPreferred',
+#            'authSource': 'admin',
+#            'authMechanism': 'SCRAM-SHA-1',
+#        }
+#    }
+#}
 
 
 # Password validation

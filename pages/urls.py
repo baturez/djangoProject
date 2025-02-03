@@ -13,6 +13,9 @@ from .views import upload_profile_picture
 urlpatterns = [
     path('', views.index, name='index'),
     path('login/', views.login, name='login'),
+    path('privacy-policy/', views.privacy_policy, name='privacy_policy'),
+    path('add-story/', views.add_story, name='add_story'),
+    path('get-stories/', views.get_stories, name='get_stories'),
     path('verify/<str:token>/', views.verify_email, name='verify_email'),
     path('signup/', views.signup, name='signup'),
     path('register/', views.register, name='register'),

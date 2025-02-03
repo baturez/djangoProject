@@ -1,0 +1,16 @@
+<h1>İstekleri Yönet</h1>
+
+{% if pending_requests %}
+    <ul>
+        {% for req in pending_requests %}
+    <div id="request-{{ req.id }}">
+        <p>{{ req.username }}</p>
+        <button type="button" class="button-60 approve-request" data-request-id="{{ req.id }}">Kabul Et</button>
+        <button type="button" class="button-60 reject-request" data-request-id="{{ req.id }}">Reddet</button>
+    </div>
+{% endfor %}
+
+    </ul>
+{% else %}
+    <p>Bekleyen istek yok.</p>
+{% endif %}

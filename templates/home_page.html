@@ -2,29 +2,51 @@
 {% load static %}
 {% load custom_filters %}
 
-{% block title %}Bartini - Giriş{% endblock %}
+{% block title %}Bartini{% endblock %}
+    <link rel="icon" type="image/x-icon" href="{% static 'images/favicon.ico' %}">
 
 {% block content %}
+    
      <link rel="stylesheet" href="{% static 'home.css' %}">
     <script src="{% static 'homejs.js' %}"></script>
 
 <!-- Orta kısımda hikayeler ve post paylaşımı alanı -->
 <div class="story-container">
-    <div class="story" onclick="showLargeStory(0)">
-        <img class="story-img" src="https://picsum.photos/200/300" alt="">
-    </div>
-    <div class="story" onclick="showLargeStory(1)">
-        <img class="story-img" src="https://picsum.photos/200/300?1" alt="">
-    </div>
-    <div class="story" onclick="showLargeStory(2)">
-        <img class="story-img" src="https://picsum.photos/200/300?2" alt="">
+    <div class="story-upload-container">
+        <form id="storyUploadForm" method="POST" enctype="multipart/form-data">
+        {% csrf_token %}
+        <label for="storyUpload" class="upload-label">
+            <img class="story-img" style="border-radius:50%;" id="profileImg" src="/media/{{ profile_picture }}" alt="Profile Picture">
+            <input id="storyUpload" type="file" name="story_files" multiple onchange="previewImage(event)">
+        </label>
+
+        <div id="previewModal" class="modal">
+            <div class="modal-content">
+                <span class="close" onclick="closeModal()">&times;</span>
+                <div id="imagePreviewContainer">
+                    <img id="imagePreview" src="" alt="Preview" style="width: 100%; height: auto;">
+                </div>
+                <button type="button" class="upload-button" onclick="submitForm()">Yükle</button>
+            </div>
+        </div>
+    </form>
     </div>
 </div>
 
-<div class="large-story-container" id="largeStoryContainer" style="display: none;" onclick="closeLargeStory()">
-    <span class="close-btn">&times;</span>
-    <img id="largeStoryImage" src="" alt="Büyütülmüş Hikaye" onclick="nextStory(event)">
+
+
+<!-- Büyük story görüntüleme için alan -->
+<div class="large-story-container" id="largeStoryContainer" style="display: none;">
+  <span class="close-btn" onclick="closeLargeStory()">&times;</span>
+  <div id="largeUsername" class="large-username"></div>
+  <img id="largeStoryImage" src="" alt="Büyütülmüş Hikaye"> 
+  <div class="story-nav">
+    <button id="prevStory" onclick="prevStory(event)">&#8249;</button>
+    <button id="nextStory" onclick="nextStory(event)">&#8250;</button>
+  </div>
 </div>
+
+
 
 <!-- Post oluşturma -->
 <div class="create-post">
@@ -32,7 +54,6 @@
         {% csrf_token %}
         <textarea name="post_content" placeholder="Neler Düşünüyorsunuz?" required></textarea>
 
-        <!-- Hidden inputs for image and video uploads -->
         <div class="upload-section">
     <!-- Fotoğraf Yükleme -->
     <button type="button" class="upload-btn photo-btn" onclick="document.getElementById('photoInput').click();">
@@ -55,14 +76,8 @@
     <button class="send-btn">Gönder</button>
 </div>
         
-
-        
-
-        <!-- Icons to toggle photo or video input -->
-        
     </form>
 </div>
-
 <!-- Postların listelenmesi -->
 <div class="posts-container">
     {% if posts %}
@@ -74,9 +89,6 @@
                 <h4>{{ post.username }}</h4>
             </div>
             <p>{{ post.content }}</p>
-        
-            
-            <!-- Display media if available -->
             {% if post.file_urls %}
                 <div class="post-media">
                     {% for url in post.file_urls %}
@@ -93,7 +105,6 @@
                     {% endfor %}
                 </div>
             {% endif %}
-
             <div class="post-footer">
                 <button class="like-btn" data-post-id="{{ post|get_post_id }}">
     <img src="{% static 'images/like.png' %}" alt="Like"> <span>{{ post.likes }}</span>
@@ -102,7 +113,6 @@
                     <img src="{% static 'images/comment.png' %}" alt="Comment"> {{ post.comment_count }}
                 </button>
             </div>
-
             <div class="comments-section" id="comments-{{ post|get_post_id }}" style="display: none;">
                 <h5>Comments</h5>
                 {% if post.comments %}
@@ -115,8 +125,6 @@
                 {% else %}
                     <p>No comments yet.</p>
                 {% endif %}
-
-                <!-- Add Comment Form -->
                 <form method="post" action="{% url 'add_comment' %}" class="add-comment-form" id="comment-form-{{ post|get_post_id }}" onsubmit="return submitComment(event, '{{ post|get_post_id }}')">
                     {% csrf_token %}
                     <input type="hidden" name="post_id" value="{{ post|get_post_id }}">
@@ -135,6 +143,241 @@
 
 <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
 <script>
+function previewImage(event) {
+    const file = event.target.files[0];  
+    const reader = new FileReader();
+
+    reader.onload = function () {
+        const imagePreview = document.getElementById('imagePreview');
+        imagePreview.src = reader.result;  
+        openModal();  
+    };
+
+    if (file) {
+        reader.readAsDataURL(file);  
+    }
+}
+function openModal() {
+    document.getElementById('previewModal').style.display = 'block';
+}
+
+function closeModal() {
+    document.getElementById('previewModal').style.display = 'none';
+}
+async function submitForm() {
+    const form = document.getElementById('storyUploadForm');
+    const formData = new FormData(form);  
+
+    const response = await fetch('/add-story/', {
+        method: 'POST',
+        body: formData,
+    });
+
+    const result = await response.json();
+
+    if (result.success) {
+        closeModal();
+
+        form.reset();
+    } else {
+        alert(result.error || 'Story yüklenemedi.');
+    }
+}
+
+window.addEventListener('load', function() {
+        const uploadContainer = document.querySelector('.story-upload-container');
+        uploadContainer.style.display = 'block';
+    });
+let currentStoryIndex = 0;
+let stories = [];
+let currentGroupIndex = 0;
+
+function showLargeStory(groupIndex, storyIndex) {
+    currentGroupIndex = groupIndex;
+    currentStoryIndex = 0;
+
+    const story = allStories[groupIndex].file_urls[0];
+    const username = allStories[groupIndex].username; 
+
+    const largeStoryImage = document.getElementById('largeStoryImage');
+    const largeStoryContainer = document.getElementById('largeStoryContainer');
+    const largeUsername = document.getElementById('largeUsername'); 
+
+    largeStoryImage.src = story;
+    largeStoryContainer.style.display = 'block';
+
+    if (largeUsername) {
+        largeUsername.textContent = username;
+    } else {
+        const usernameHeader = document.createElement('div');
+        usernameHeader.classList.add('story-username');
+        usernameHeader.id = 'largeUsername'; 
+        usernameHeader.textContent = username;
+        largeStoryContainer.appendChild(usernameHeader); 
+    }
+}
+function closeLargeStory() {
+    const largeStoryContainer = document.getElementById('largeStoryContainer');
+    largeStoryContainer.style.display = 'none';
+}
+
+function nextStory() {
+    if (currentStoryIndex < allStories[currentGroupIndex].file_urls.length - 1) {
+        currentStoryIndex++;
+    } else {
+        if (currentGroupIndex < allStories.length - 1) {
+            currentGroupIndex++;
+            currentStoryIndex = 0;
+        }
+    }
+
+    const story = allStories[currentGroupIndex].file_urls[currentStoryIndex];
+    const username = allStories[currentGroupIndex].username; 
+    const largeStoryImage = document.getElementById('largeStoryImage');
+    const largeUsername = document.getElementById('largeUsername'); 
+
+    largeStoryImage.src = story;
+    largeUsername.textContent = username; 
+}
+
+function prevStory() {
+    if (currentStoryIndex > 0) {
+        currentStoryIndex--;
+    } else {
+        if (currentGroupIndex > 0) {
+            currentGroupIndex--;
+            currentStoryIndex = allStories[currentGroupIndex].file_urls.length - 1;
+        }
+    }
+
+    const story = allStories[currentGroupIndex].file_urls[currentStoryIndex];
+    const username = allStories[currentGroupIndex].username; 
+    const largeStoryImage = document.getElementById('largeStoryImage');
+    const largeUsername = document.getElementById('largeUsername'); 
+
+    largeStoryImage.src = story;
+    largeUsername.textContent = username; 
+}
+document.querySelector('.story-upload-container form').addEventListener('submit', async function (e) {
+    e.preventDefault();  
+
+    const formData = new FormData(this);
+    const response = await fetch('/add-story/', {
+        method: 'POST',
+        body: formData,
+    });
+
+    const result = await response.json();
+
+    if (result.success) {
+        const storyContainer = document.querySelector('.story-container');
+        result.stories.forEach((story, index) => {
+            const newStory = document.createElement('div');
+            newStory.classList.add('story');
+            newStory.setAttribute('onclick', `showLargeStory(${index})`);
+            newStory.innerHTML = `<img class="story-img" src="${story.file_url}" alt="Story">`;
+            storyContainer.appendChild(newStory);
+        });
+    } else {
+        alert(result.error || 'Story yüklenemedi.');
+    }
+});
+
+
+async function loadStories() {
+    const response = await fetch('/get-stories/');
+    const result = await response.json();
+
+    if (result.success) {
+        const storyContainer = document.querySelector('.story-container');
+        storyContainer.innerHTML = '';
+
+        const uploadFormHTML = `
+            <div class="story-upload-container">
+                <form id="storyUploadForm" method="POST" enctype="multipart/form-data">
+
+                    {% csrf_token %}
+                    <label for="storyUpload" class="upload-label">
+                        <img class="story-img" style="border-radius:50%;" id="profileImg" src="/media/{{ profile_picture }}" alt="Profile Picture">
+                        <input id="storyUpload" type="file" name="story_files" multiple onchange="previewImage(event)">
+                    </label>
+                    <div id="previewModal" class="modal">
+                        <div class="modal-content">
+                            <span class="close" onclick="closeModal()">&times;</span>
+                            <div id="imagePreviewContainer">
+                                <img id="imagePreview" src="" alt="Preview" style="width: 100%; height: auto;">
+                            </div>
+                            <button type="button" class="upload-button" onclick="submitForm()">Yükle</button>
+                        </div>
+                    </div>
+
+                </form>
+            </div>
+
+        `;
+
+        storyContainer.innerHTML += uploadFormHTML;
+
+        const form = document.getElementById('storyUploadForm');
+        form.addEventListener('submit', async (event) => {
+            event.preventDefault();
+            const formData = new FormData(form);
+
+            const uploadResponse = await fetch('/add-story/', {
+                method: 'POST',
+                body: formData,
+            });
+            const uploadResult = await uploadResponse.json();
+
+            if (uploadResult.success) {
+                console.log('Story başarılı şekilde yüklendi:', uploadResult);
+                loadStories();  
+            } else {
+                console.error('Story yükleme hatası:', uploadResult.error);
+            }
+        });
+
+        result.stories.forEach((group, groupIndex) => {
+            const groupContainer = document.createElement('div');
+            groupContainer.classList.add('story-group');
+
+            const usernameHeader = document.createElement('div');
+            usernameHeader.classList.add('story-username');
+            usernameHeader.textContent = group.username;
+            groupContainer.appendChild(usernameHeader);
+
+            const storiesContainer = document.createElement('div');
+            storiesContainer.classList.add('stories-container');
+
+            const storyDiv = document.createElement('div');
+            storyDiv.classList.add('story');
+
+            group.file_urls.forEach((fileUrl, storyIndex) => {
+                const imgElement = document.createElement('img');
+                imgElement.classList.add('story-img');
+                imgElement.src = fileUrl;
+                imgElement.alt = `Story ${storyIndex + 1}`;
+                imgElement.setAttribute('onclick', `showLargeStory(${groupIndex}, ${storyIndex})`);
+
+                storyDiv.appendChild(imgElement);
+            });
+
+            storiesContainer.appendChild(storyDiv);
+            groupContainer.appendChild(storiesContainer);
+            storyContainer.appendChild(groupContainer);
+        });
+
+        window.allStories = result.stories;
+    } else {
+        console.error("Story'ler alınamadı:", result.error);
+    }
+}
+
+
+
+
+window.onload = loadStories;
+
 document.addEventListener("DOMContentLoaded", function () {
     const lazyVideos = document.querySelectorAll("video");
 
@@ -149,8 +392,6 @@ document.addEventListener("DOMContentLoaded", function () {
     });
 
     lazyVideos.forEach(video => videoObserver.observe(video));
-
-    // The showInput function should be defined so it works properly when toggling inputs
     window.showInput = function(type) {
         document.getElementById('photoInput').style.display = 'none';
         document.getElementById('videoInput').style.display = 'none';
@@ -161,8 +402,6 @@ document.addEventListener("DOMContentLoaded", function () {
             document.getElementById('videoInput').style.display = 'block';
         }
     };
-
-    // Toggle comments section visibility
     window.toggleComments = function(postId) {
         const commentSection = document.getElementById('comments-' + postId);
         commentSection.style.display = commentSection.style.display === 'block' ? 'none' : 'block';
@@ -171,16 +410,16 @@ document.addEventListener("DOMContentLoaded", function () {
 
 $(document).ready(function(){
     $('#postForm').submit(function(event){
-        event.preventDefault(); // Prevent the form from submitting
+        event.preventDefault();
 
-        var formData = new FormData(this); // Create a FormData object
+        var formData = new FormData(this);
 
         $.ajax({
             type: 'POST',
-            url: "{% url 'add_post' %}", // URL to add a post
+            url: "{% url 'add_post' %}",
             data: formData,
-            processData: false, // Don't process data
-            contentType: false, // Don't set content-type header
+            processData: false,
+            contentType: false,
             success: function(response) {
                 if (response.success) {
                     document.getElementById('previewArea').innerHTML = '';
@@ -215,22 +454,20 @@ $(document).ready(function(){
                                 </button>
                             </div>
                             <div class="comments-section" id="comments-${response.post_id}" style="display: none;">
-                                <!-- Comments will go here -->
                             </div>
                         </div>
                     `;
-                    $('.posts-container').prepend(newPost); // Add the new post to the top
-                    $('textarea[name="post_content"]').val(''); // Clear the post content field
-                    $('#photoInput').val(''); // Clear photo input
-                    $('#videoInput').val(''); // Clear video input
+                    $('.posts-container').prepend(newPost);
+                    $('textarea[name="post_content"]').val('');
+                    $('#photoInput').val('');
+                    $('#videoInput').val('');
                 } else {
-                    alert(response.error_message); // Show error if post creation fails
+                    alert(response.error_message);
                 }
             }
         });
     });
 
-    // Like button functionality
    $(document).on('click', '.like-btn', function() {
     const postId = $(this).data('post-id');
     const button = $(this);
@@ -245,12 +482,10 @@ $(document).ready(function(){
         success: function(response) {
             if (response.success) {
                 if (response.liked) {
-                    // Beğeni eklendi
                     button.html(`
                         <img style="width: 20px" src="{% static 'images/like.png' %}"> ${response.likes}
                     `);
                 } else {
-                    // Beğeni geri çekildi
                     button.html(`
                         <img style="width: 20px" src="{% static 'images/like.png' %}"> ${response.likes}
                     `);
@@ -265,7 +500,7 @@ $(document).ready(function(){
 function previewFile(type) {
     const input = document.getElementById(type + 'Input');
     const previewArea = document.getElementById('previewArea');
-    previewArea.innerHTML = ''; // Clear previous previews
+    previewArea.innerHTML = '';
 
     if (input.files && input.files[0]) {
         const file = input.files[0];
@@ -281,20 +516,16 @@ function previewFile(type) {
                 previewElement.src = e.target.result;
                 previewElement.controls = true;
             }
-
-            // Add classes for consistent size
             previewElement.classList.add('preview-media');
-
             const removeButton = document.createElement('button');
             removeButton.textContent = 'Kaldır';
             removeButton.type = 'button';
             removeButton.className = 'remove-btn';
             removeButton.onclick = function () {
-                input.value = ''; // Clear the file input
-                previewArea.innerHTML = ''; // Remove preview
+                input.value = '';
+                previewArea.innerHTML = '';
             };
 
-            // Create a wrapper for styling
             const previewWrapper = document.createElement('div');
             previewWrapper.classList.add('preview-wrapper');
             previewWrapper.appendChild(previewElement);
